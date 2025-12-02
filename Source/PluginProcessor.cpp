@@ -94,6 +94,9 @@ void AudioPluginAudioProcessor::prepareToPlay (double sampleRate, int samplesPer
     // initialisation that you need..
     juce::ignoreUnused (sampleRate, samplesPerBlock);
     sinewave.prepare(sampleRate, getTotalNumOutputChannels());
+
+    frequencyParam = state.getRawParameterValue("freqHz");
+    playParam = state.getRawParameterValue("play");
 }
 
 void AudioPluginAudioProcessor::releaseResources()
@@ -144,20 +147,18 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
 
-    float freq = state.getRawParameterValue("freqHz")->load();
+
 
     // This is the place where you'd normally do the guts of your plugin's
     // audio processing...
 
-    // For loop for bypass buttons
-    if (!isBypassed) {
-        float freq = state.getRawParameterValue("freqHz")->load();
-        sinewave.setFrequency(freq);
-        sinewave.process(buffer);
-    }
-    else {
-        buffer.clear();
-    }
+    const float freq = frequencyParam->load();
+    const bool shouldBePlaying = static_cast<bool>(playParam->load());
+
+    sinewave.setFrequency(freq);
+    sinewave.setAmplitude(shouldBePlaying ? 0.4f : 0.0f );
+
+    sinewave.process(buffer);
 
 
     // Make sure to reset the state if your inner loop is processing
@@ -209,6 +210,7 @@ juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 juce::AudioProcessorValueTreeState::ParameterLayout  AudioPluginAudioProcessor::createParameters() {
     return {
         std::make_unique<juce::AudioParameterFloat>(juce::ParameterID { "freqHz" }, "Frequency", 20.0f, 20000.0f, 220.0f ),
-        std::make_unique<juce::AudioParameterBool>(juce::ParameterID { "isPlaying" }, "Is Playing", true)
+        std::make_unique<juce::AudioParameterBool>(juce::ParameterID { "play" }, "Play", true)
+        //std::make_unique<juce::AudioParameterBool>(juce::ParameterID { "isPlaying" }, "Is Playing", true)
     };
 }

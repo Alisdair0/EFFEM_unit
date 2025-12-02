@@ -20,7 +20,6 @@ public:
     void processBlock (juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
     using AudioProcessor::processBlock;
 
-    void setBypass(bool bypassed) { isBypassed = bypassed; }
 
     //==============================================================================
     juce::AudioProcessorEditor* createEditor() override;
@@ -49,11 +48,12 @@ public:
 
 
 private:
-    bool isBypassed = false;
 
     SineWave sinewave;
     juce::AudioProcessorValueTreeState state;
     juce::AudioProcessorValueTreeState::ParameterLayout createParameters();
+    std::atomic<float>* frequencyParam;
+    std::atomic<float>* playParam;
 
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AudioPluginAudioProcessor)
