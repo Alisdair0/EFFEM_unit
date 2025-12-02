@@ -37,8 +37,8 @@ set(SourceFiles
 
 # Change these to your own preferences
 juce_add_plugin(${PROJECT_NAME}
-        COMPANY_NAME theaudioprogrammer
-        IS_SYNTH FALSE
+        COMPANY_NAME alisdair0
+        IS_SYNTH TRUE
         NEEDS_MIDI_INPUT FALSE
         NEEDS_MIDI_OUTPUT FALSE
         IS_MIDI_EFFECT FALSE
@@ -48,7 +48,7 @@ juce_add_plugin(${PROJECT_NAME}
         PLUGIN_MANUFACTURER_CODE Tap1
         PLUGIN_CODE Reg0
         FORMATS VST3 AU Standalone
-        PRODUCT_NAME "TapPluginTemplate"        
+        PRODUCT_NAME "EFFEM"
 )
 
 # How we want our SourceFiles to appear in our IDE
