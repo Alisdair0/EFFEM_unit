@@ -43,6 +43,9 @@ public:
     void getStateInformation (juce::MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
 
+    juce::AudioProcessorValueTreeState& getState() { return state; }
+
+
 private:
     SineWave sinewave;
     juce::AudioProcessorValueTreeState state;
