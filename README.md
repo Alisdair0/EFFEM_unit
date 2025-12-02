@@ -1,7 +1,7 @@
-## EFFEM UNIT
-# Alisdair Chauvin 12/01/25
+# EFFEM UNIT
+## Alisdair Chauvin 12/01/25
 
-Synthesizer built with JUCE using CMake. 
+### Synthesizer built with JUCE using CMake. 
 
 Options
 - Choose between multiple waveforms, 

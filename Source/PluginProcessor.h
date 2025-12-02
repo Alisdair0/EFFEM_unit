@@ -20,6 +20,8 @@ public:
     void processBlock (juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
     using AudioProcessor::processBlock;
 
+    void setBypass(bool bypassed) { isBypassed = bypassed; }
+
     //==============================================================================
     juce::AudioProcessorEditor* createEditor() override;
     bool hasEditor() const override;
@@ -47,6 +49,8 @@ public:
 
 
 private:
+    bool isBypassed = false;
+
     SineWave sinewave;
     juce::AudioProcessorValueTreeState state;
     juce::AudioProcessorValueTreeState::ParameterLayout createParameters();

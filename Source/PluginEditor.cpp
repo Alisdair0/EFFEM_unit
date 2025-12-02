@@ -3,9 +3,11 @@
 
 //==============================================================================
 AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor (AudioPluginAudioProcessor& p)
-    : AudioProcessorEditor (&p), processorRef (p), freqSliderAttachment(processorRef.getState(), "freqHz", frequencySlider)
+    : AudioProcessorEditor (&p),
+      processorRef (p)
 {
     juce::ignoreUnused (processorRef);
+    // Make sure that before the constructor has finished, you've set the
     // Make sure that before the constructor has finished, you've set the
     // editor's size to whatever you need it to be.
 
@@ -15,6 +17,10 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor (AudioPluginAud
     frequencySlider.setTextBoxStyle(juce::Slider::TextBoxBelow, true, 50, 25);
     //frequencySlider.setRange(0.0f, 1.0f, 0.01f);
     addAndMakeVisible(frequencySlider);
+
+    freqSliderAttachment = std::make_unique<
+        juce::AudioProcessorValueTreeState::SliderAttachment>(
+            processorRef.getState(), "freqHz", frequencySlider);
 
     playButton.setButtonText("Playing");
     playButton.setToggleState(true, juce::NotificationType::dontSendNotification);
@@ -27,6 +33,7 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor (AudioPluginAud
     {
         // Change the state of button when it's clicked
         const bool isPlaying = playButton.getToggleState();
+        processorRef.setBypass(!isPlaying);
         playButton.setButtonText(isPlaying ? "Playing" : "Bypassed");
     };
 

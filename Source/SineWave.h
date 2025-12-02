@@ -19,7 +19,7 @@ public:
 
 
 private:
-    float amplitude = 0.00f;
+    float amplitude = 0.5f;
     float frequency = 440.0f;
     float currentSampleRate = 0.0f;
     float timeIncrement = 0.0f;

@@ -21,7 +21,7 @@ private:
     juce::TextButton playButton;
     juce::Label frequencyLabel{"FrequencyLabel", "Frequency"};
 
-    juce::AudioProcessorValueTreeState::SliderAttachment freqSliderAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> freqSliderAttachment;
 
     // This reference is provided as a quick way for your editor to
     // access the processor object that created it.

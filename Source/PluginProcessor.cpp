@@ -10,9 +10,10 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
                       #endif
                        .withOutput ("Output", juce::AudioChannelSet::stereo(), true)
                      #endif
-                       )
+                       ), state(*this, nullptr, "parameters", createParameters())
 {
 }
+
 
 AudioPluginAudioProcessor::~AudioPluginAudioProcessor()
 {
@@ -143,13 +144,21 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
 
+    float freq = state.getRawParameterValue("freqHz")->load();
+
     // This is the place where you'd normally do the guts of your plugin's
     // audio processing...
 
-    float freq = state.getRawParameterValue("freqHz")->load();
-    sinewave.setFrequency(freq);
+    // For loop for bypass buttons
+    if (!isBypassed) {
+        float freq = state.getRawParameterValue("freqHz")->load();
+        sinewave.setFrequency(freq);
+        sinewave.process(buffer);
+    }
+    else {
+        buffer.clear();
+    }
 
-    sinewave.process(buffer);
 
     // Make sure to reset the state if your inner loop is processing
     // the samples and the outer loop is handling the channels.
@@ -199,6 +208,7 @@ juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 
 juce::AudioProcessorValueTreeState::ParameterLayout  AudioPluginAudioProcessor::createParameters() {
     return {
-        std::make_unique<juce::AudioParameterFloat>(juce::ParameterID { "freqHz" }, "Frequency", 20.0f, 20000.0f, 220.0f )
+        std::make_unique<juce::AudioParameterFloat>(juce::ParameterID { "freqHz" }, "Frequency", 20.0f, 20000.0f, 220.0f ),
+        std::make_unique<juce::AudioParameterBool>(juce::ParameterID { "isPlaying" }, "Is Playing", true)
     };
 }
