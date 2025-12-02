@@ -7,7 +7,7 @@
 void SineWave::prepare (const double currentSampleRate, const int numChannels) {
     sampleRate = static_cast<float>(currentSampleRate);
     phases.resize(static_cast<size_t>(numChannels), 0.0f);
-    smoothedFreq.reset(sampleRate, .01f);
+    smoothedFreq.reset(sampleRate, .05f);
     smoothedFreq.setCurrentAndTargetValue(getFrequency());
 }
 

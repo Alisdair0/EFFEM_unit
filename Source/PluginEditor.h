@@ -21,8 +21,6 @@ private:
     juce::TextButton playButton;
     juce::Label frequencyLabel{"FrequencyLabel", "Frequency"};
 
-    juce::ComboBox waveformSelector;
-
     // This reference is provided as a quick way for your editor to
     // access the processor object that created it.
     AudioPluginAudioProcessor& processorRef;

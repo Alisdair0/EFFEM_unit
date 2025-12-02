@@ -20,7 +20,9 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor (AudioPluginAud
     //frequencySlider.setRange(0.0f, 1.0f, 0.01f);
     addAndMakeVisible(frequencySlider);
 
-    // === Play Button === //
+    // freqSliderAttachment = std::make_unique<
+    //     juce::AudioProcessorValueTreeState::SliderAttachment>(
+    //         processorRef.getState(), "freqHz", frequencySlider);
 
     playButton.setButtonText("Playing");
     playButton.setToggleState(true, juce::NotificationType::dontSendNotification);
@@ -35,7 +37,6 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor (AudioPluginAud
         const bool isPlaying = playButton.getToggleState();
         playButton.setButtonText(isPlaying ? "Playing" : "Bypassed");
     };
-    // ==================== //
 
     addAndMakeVisible(playButton);
 
@@ -44,24 +45,6 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor (AudioPluginAud
     addAndMakeVisible(frequencyLabel);
 
     setSize (400, 400);
-
-    // === Waveform Selector === //
-    waveformSelector.addItem("Sine", 1);
-    waveformSelector.addItem("Saw", 2);
-    waveformSelector.addItem("Triangle", 3);
-    waveformSelector.setSelectedId(1); // default: Sine
-
-    waveformSelector.onChange = [this]() {
-        switch (waveformSelector.getSelectedId())
-        {
-            case 1: processorRef.setWaveform(AudioPluginAudioProcessor::Waveform::Sine); break;
-            case 2: processorRef.setWaveform(AudioPluginAudioProcessor::Waveform::Saw); break;
-            case 3: processorRef.setWaveform(AudioPluginAudioProcessor::Waveform::Triangle); break;
-        }
-    };
-
-    addAndMakeVisible(waveformSelector);
-
 }
 
 AudioPluginAudioProcessorEditor::~AudioPluginAudioProcessorEditor()
@@ -89,5 +72,4 @@ void AudioPluginAudioProcessorEditor::resized()
     frequencyLabel.setBounds(getWidth() / 2 - 50, getHeight() / 2 - 120, 100, 20);
     frequencySlider.setBounds (getWidth() / 2 - 50, getHeight() / 2 - 100, 100, 200);
     playButton.setBounds (getWidth() / 2 - 50, getHeight() / 2 + 120, 100, 20);
-    waveformSelector.setBounds(getWidth()/2 - 50, getHeight()/2 + 160, 100, 20);
 }
