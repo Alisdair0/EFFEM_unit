@@ -2,8 +2,8 @@
 // Created by alisdair chauvin on 11/18/25.
 //
 
-#ifndef SIMPLEJUCEPLUGINTEMPLATE_SINEWAVE_H
-#define SIMPLEJUCEPLUGINTEMPLATE_SINEWAVE_H
+#ifndef SIMPLEJUCEPLUGINTEMPLATE_SAWWAVE_H
+#define SIMPLEJUCEPLUGINTEMPLATE_SAWWAVE_H
 
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <numbers>
@@ -30,4 +30,6 @@ private:
 
 
 };
+
+#endif //SIMPLEJUCEPLUGINTEMPLATE_SAWWAVE_H
 

@@ -27,7 +27,7 @@ void SawWave::process (juce::AudioBuffer<float>& buffer) {
             const float frequency = smoothedFreq.getNextValue();
             const float phaseInc = (doublePi * frequency / sampleRate);
 
-            channelData[sample] = amplitude * std::sin(phase);
+            channelData[sample] = amplitude * (2.0f * (phase / doublePi) - 1.0f);
             phase += phaseInc;
             // iteration++;
             // std::cout << "Channel: " << channel << " Current Time: " << iteration << " / " << currentSampleRate << std::endl;

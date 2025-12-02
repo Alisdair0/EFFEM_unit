@@ -1,6 +1,8 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
+static constexpr float doublePi = 2.0f * juce::MathConstants<float>::pi;
+
 //==============================================================================
 AudioPluginAudioProcessor::AudioPluginAudioProcessor()
      : AudioProcessor (BusesProperties()
@@ -93,7 +95,10 @@ void AudioPluginAudioProcessor::prepareToPlay (double sampleRate, int samplesPer
     // Use this method as the place to do any pre-playback
     // initialisation that you need..
     juce::ignoreUnused (sampleRate, samplesPerBlock);
-    sinewave.prepare(sampleRate, getTotalNumOutputChannels());
+    sineWave.prepare(sampleRate, getTotalNumOutputChannels());
+    sawWave.prepare(sampleRate, getTotalNumOutputChannels());
+
+    phases.resize(getTotalNumOutputChannels(), 0.0f);
 
     frequencyParam = state.getRawParameterValue("freqHz");
     playParam = state.getRawParameterValue("play");
@@ -129,47 +134,48 @@ bool AudioPluginAudioProcessor::isBusesLayoutSupported (const BusesLayout& layou
   #endif
 }
 
-void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
-                                              juce::MidiBuffer& midiMessages)
+void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
-    juce::ignoreUnused (midiMessages);
-
+    juce::ignoreUnused(midiMessages);
     juce::ScopedNoDenormals noDenormals;
-    auto totalNumInputChannels  = getTotalNumInputChannels();
+
     auto totalNumOutputChannels = getTotalNumOutputChannels();
+    for (int i = getTotalNumInputChannels(); i < totalNumOutputChannels; ++i)
+        buffer.clear(i, 0, buffer.getNumSamples());
 
-    // In case we have more outputs than inputs, this code clears any output
-    // channels that didn't contain input data, (because these aren't
-    // guaranteed to be empty - they may contain garbage).
-    // This is here to avoid people getting screaming feedback
-    // when they first compile a plugin, but obviously you don't need to keep
-    // this code if your algorithm always overwrites all the output channels.
-    for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
-        buffer.clear (i, 0, buffer.getNumSamples());
+    float amplitude = 0.2f; // adjustable
+    float freq = state.getRawParameterValue("freqHz")->load();
 
-
-
-    // This is the place where you'd normally do the guts of your plugin's
-    // audio processing...
-
-    const float freq = frequencyParam->load();
-    const bool shouldBePlaying = static_cast<bool>(playParam->load());
-
-    sinewave.setFrequency(freq);
-    sinewave.setAmplitude(shouldBePlaying ? 0.4f : 0.0f );
-
-    sinewave.process(buffer);
-
-
-    // Make sure to reset the state if your inner loop is processing
-    // the samples and the outer loop is handling the channels.
-    // Alternatively, you can process the samples with the channels
-    // interleaved by keeping the same state.
-    for (int channel = 0; channel < totalNumInputChannels; ++channel)
+    for (int channel = 0; channel < buffer.getNumChannels(); ++channel)
     {
-        auto* channelData = buffer.getWritePointer (channel);
-        juce::ignoreUnused (channelData);
-        // ..do something to the data...
+        auto* channelData = buffer.getWritePointer(channel);
+        auto& phase = phases[static_cast<size_t>(channel)];
+        float phaseInc = doublePi * freq / getSampleRate();
+
+        for (int sample = 0; sample < buffer.getNumSamples(); ++sample)
+        {
+            switch (currentWaveform)
+            {
+                case Waveform::Sine:
+                    channelData[sample] = amplitude * std::sin(phase);
+                    break;
+
+                case Waveform::Saw:
+                    channelData[sample] = amplitude * (2.0f * (phase / doublePi) - 1.0f);
+                    break;
+
+                case Waveform::Triangle:
+                {
+                    float value = 2.0f * (phase / doublePi);
+                    if (value > 1.0f) value = 2.0f - value;
+                    channelData[sample] = amplitude * (2.0f * value - 1.0f);
+                }
+                    break;
+            }
+
+            phase += phaseInc;
+            if (phase >= doublePi) phase -= doublePi;
+        }
     }
 }
 
