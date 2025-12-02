@@ -37,8 +37,6 @@ set(SourceFiles
         Source/Square.h
         Source/SineWave.cpp
         Source/SineWave.h
-        Source/SawWave.cpp
-        Source/SawWave.h
 )
 
 # Change these to your own preferences

@@ -208,9 +208,12 @@ juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 }
 
 juce::AudioProcessorValueTreeState::ParameterLayout  AudioPluginAudioProcessor::createParameters() {
+
     return {
         std::make_unique<juce::AudioParameterFloat>(juce::ParameterID { "freqHz" }, "Frequency", 20.0f, 20000.0f, 220.0f ),
         std::make_unique<juce::AudioParameterBool>(juce::ParameterID { "play" }, "Play", true)
         //std::make_unique<juce::AudioParameterBool>(juce::ParameterID { "isPlaying" }, "Is Playing", true)
+
+
     };
 }

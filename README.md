@@ -5,7 +5,7 @@
 
 Options
 - Choose between multiple waveforms, 
-- Adjust envelopes and filtere
+- Adjust envelopes and filters
 - Visualize sound design in real time.
 
 Usage
