@@ -86,9 +86,13 @@ void AudioPluginAudioProcessor::changeProgramName (int index, const juce::String
 //==============================================================================
 void AudioPluginAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
+    // Called when plugin is instantiated
+    // or when the sample rate changes to ensure equality
+
     // Use this method as the place to do any pre-playback
     // initialisation that you need..
     juce::ignoreUnused (sampleRate, samplesPerBlock);
+    sinewave.prepare(sampleRate, getTotalNumOutputChannels());
 }
 
 void AudioPluginAudioProcessor::releaseResources()
@@ -141,6 +145,12 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
 
     // This is the place where you'd normally do the guts of your plugin's
     // audio processing...
+
+    float freq = state.getRawParameterValue("freqHz")->load();
+    sinewave.setFrequency(freq);
+
+    sinewave.process(buffer);
+
     // Make sure to reset the state if your inner loop is processing
     // the samples and the outer loop is handling the channels.
     // Alternatively, you can process the samples with the channels
@@ -185,4 +195,10 @@ void AudioPluginAudioProcessor::setStateInformation (const void* data, int sizeI
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {
     return new AudioPluginAudioProcessor();
+}
+
+juce::AudioProcessorValueTreeState::ParameterLayout  AudioPluginAudioProcessor::createParameters() {
+    return {
+        std::make_unique<juce::AudioParameterFloat>(juce::ParameterID { "freqHz" }, "Frequency", 20.0f, 20000.0f, 220.0f )
+    };
 }
