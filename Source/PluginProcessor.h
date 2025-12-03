@@ -2,6 +2,8 @@
 
 #include <juce_audio_processors/juce_audio_processors.h>
 #include "Oscillator.h"
+#include "SynthVoice.h"
+#include "SynthSound.h"
 
 //==============================================================================
 class AudioPluginAudioProcessor final : public juce::AudioProcessor
@@ -48,23 +50,30 @@ public:
 
 
 private:
-    Oscillator osc1, osc2;
+    juce::Synthesiser synth;
 
-    std::atomic<float>* frequencyParam = nullptr;
+    // parameters
     std::atomic<float>* playParam = nullptr;
-
-    std::atomic<float>* osc1GainParam = nullptr;
-    std::atomic<float>* osc2GainParam = nullptr;
+    std::atomic<float>* masterGainParam = nullptr;
     std::atomic<float>* detuneParam = nullptr;
-    std::atomic<float>* pitchParam = nullptr;
-    std::atomic<float>* harmonicsParam = nullptr;
-    std::atomic<float>* osc2ModeParam = nullptr;
+    std::atomic<float>* pitchChoiceParam = nullptr; // choice index
+    std::atomic<float>* panParam = nullptr;
+    std::atomic<float>* fmAmountParam = nullptr;
 
-    //SineWave sinewave;
+    // envelope
+    std::atomic<float>* attackParam  = nullptr;
+    std::atomic<float>* decayParam   = nullptr;
+    std::atomic<float>* sustainParam = nullptr;
+    std::atomic<float>* releaseParam = nullptr;
+
+    // filter
+    std::atomic<float>* filterCutoffParam = nullptr;
+    std::atomic<float>* filterResonanceParam = nullptr;
+    std::atomic<float>* filterTypeParam = nullptr;
+
+
     juce::AudioProcessorValueTreeState state;
-
     juce::AudioProcessorValueTreeState::ParameterLayout createParameters();
-
 
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AudioPluginAudioProcessor)

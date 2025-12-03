@@ -1,113 +1,202 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
+static void configureSliderTwoDecimals(juce::Slider& s)
+{
+    s.setNumDecimalPlacesToDisplay(2);
+}
+
 //==============================================================================
 AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor (AudioPluginAudioProcessor& p)
-    : AudioProcessorEditor (&p), processorRef(p)
+    : AudioProcessorEditor (&p), processorRef (p)
 {
-    setSize (900, 600);
+    setSize (900, 400);
 
     auto& state = processorRef.getState();
 
-    // ======================
-    // OSCILLATOR UI CREATION
-    // ======================
+    // Play button
+    addAndMakeVisible (playButton);
+    playAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
+        state, "play", playButton);
 
-    baseFreqSlider.setSliderStyle(juce::Slider::Rotary);
-    baseFreqSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 70, 20);
-    addAndMakeVisible(baseFreqSlider);
-    addAndMakeVisible(baseFreqLabel);
-    baseFreqAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(state, "freqHz", baseFreqSlider);
+    // Master Gain (rotary)
+    masterGainSlider.setSliderStyle (juce::Slider::Rotary);
+    masterGainSlider.setTextBoxStyle (juce::Slider::TextBoxBelow, false, 60, 20);
+    addAndMakeVisible (masterGainSlider);
+    addAndMakeVisible (masterGainLabel);
+    masterGainAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+        state, "masterGain", masterGainSlider);
 
-    osc1GainSlider.setSliderStyle(juce::Slider::Rotary);
-    osc1GainSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 70, 20);
-    addAndMakeVisible(osc1GainSlider);
-    addAndMakeVisible(osc1GainLabel);
-    osc1GainAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(state, "osc1Gain", osc1GainSlider);
+    // Detune (vertical)
+    detuneSlider.setSliderStyle (juce::Slider::LinearVertical);
+    detuneSlider.setTextBoxStyle (juce::Slider::TextBoxBelow, false, 60, 20);
+    addAndMakeVisible (detuneSlider);
+    addAndMakeVisible (detuneLabel);
+    detuneAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+        state, "detune", detuneSlider);
 
-    osc2GainSlider.setSliderStyle(juce::Slider::Rotary);
-    osc2GainSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 70, 20);
-    addAndMakeVisible(osc2GainSlider);
-    addAndMakeVisible(osc2GainLabel);
-    osc2GainAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(state, "osc2Gain", osc2GainSlider);
+    // Pitch Shift (combo)
+    // Pitch Shift
+    pitchShiftBox.addItem("-12 semitones", 1);
+    pitchShiftBox.addItem("0 semitones", 2);
+    pitchShiftBox.addItem("+12 semitones", 3);
+    addAndMakeVisible(pitchShiftBox);
 
-    detuneSlider.setSliderStyle(juce::Slider::Rotary);
-    detuneSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 70, 20);
-    addAndMakeVisible(detuneSlider);
-    addAndMakeVisible(detuneLabel);
-    detuneAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(state, "detune", detuneSlider);
+    pitchShiftAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(
+        processorRef.getState(), "pitchShift", pitchShiftBox);
 
-    pitchShiftSlider.setSliderStyle(juce::Slider::Rotary);
-    pitchShiftSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 70, 20);
-    addAndMakeVisible(pitchShiftSlider);
+    pitchShiftLabel.setText("Pitch Shift", juce::dontSendNotification);
+    pitchShiftLabel.setColour(juce::Label::textColourId, juce::Colours::white);
+    pitchShiftLabel.setJustificationType(juce::Justification::centred);
     addAndMakeVisible(pitchShiftLabel);
-    pitchShiftAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(state, "pitchShift", pitchShiftSlider);
 
-    harmonicsSlider.setSliderStyle(juce::Slider::Rotary);
-    harmonicsSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 70, 20);
-    addAndMakeVisible(harmonicsSlider);
-    addAndMakeVisible(harmonicsLabel);
-    harmonicsAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(state, "harmonics", harmonicsSlider);
 
-    osc2ModeBox.addItem("Normal", 1);
-    osc2ModeBox.addItem("Sub", 2);
-    osc2ModeBox.addItem("Fifth", 3);
-    addAndMakeVisible(osc2ModeBox);
-    addAndMakeVisible(osc2ModeLabel);
-    osc2ModeAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(state, "osc2Mode", osc2ModeBox);
+    // Pan (rotary)
+    panSlider.setSliderStyle (juce::Slider::Rotary);
+    panSlider.setTextBoxStyle (juce::Slider::TextBoxBelow, false, 60, 20);
+    addAndMakeVisible (panSlider);
+    addAndMakeVisible (panLabel);
+    panAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+        state, "pan", panSlider);
 
-    addAndMakeVisible(playButton);
-    playAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(state, "play", playButton);
+    // FM Amount (rotary)
+    fmSlider.setSliderStyle (juce::Slider::Rotary);
+    fmSlider.setTextBoxStyle (juce::Slider::TextBoxBelow, false, 60, 20);
+    addAndMakeVisible (fmSlider);
+    addAndMakeVisible (fmLabel);
+    fmAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+        state, "fmAmount", fmSlider);
 
-    // ======================
-    // FUTURE UI SECTIONS
-    // ======================
+    configureSliderTwoDecimals(detuneSlider);
+    configureSliderTwoDecimals(panSlider);
+    configureSliderTwoDecimals(masterGainSlider);
+    configureSliderTwoDecimals(fmSlider);
 
-    addAndMakeVisible(envelopesGroup);
-    addAndMakeVisible(filtersGroup);
-    addAndMakeVisible(midiGroup);
-    addAndMakeVisible(visualGroup);
+    // ===================== ADSR Sliders ========================= //
+
+    // Attack
+    attackSlider.setSliderStyle(juce::Slider::LinearVertical);
+    attackSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 40, 16);
+    addAndMakeVisible(attackSlider);
+
+    attackAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+    state, "attack", attackSlider);
+
+    attackLabel.setJustificationType(juce::Justification::centred);
+    attackLabel.setColour(juce::Label::textColourId, juce::Colours::white);
+    addAndMakeVisible(attackLabel);
+
+    // Decay
+    decaySlider.setSliderStyle(juce::Slider::LinearVertical);
+    decaySlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 40, 16);
+    addAndMakeVisible(decaySlider);
+
+    decayAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+        state, "decay", decaySlider);
+
+    decayLabel.setJustificationType(juce::Justification::centred);
+    decayLabel.setColour(juce::Label::textColourId, juce::Colours::white);
+    addAndMakeVisible(decayLabel);
+
+    // Sustain
+    sustainSlider.setSliderStyle(juce::Slider::LinearVertical);
+    sustainSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 40, 16);
+    addAndMakeVisible(sustainSlider);
+
+    sustainAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+        state, "sustain", sustainSlider);
+
+    sustainLabel.setJustificationType(juce::Justification::centred);
+    sustainLabel.setColour(juce::Label::textColourId, juce::Colours::white);
+    addAndMakeVisible(sustainLabel);
+
+    // Release
+    releaseSlider.setSliderStyle(juce::Slider::LinearVertical);
+    releaseSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 40, 16);
+    addAndMakeVisible(releaseSlider);
+
+    releaseAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+        state, "release", releaseSlider);
+
+    releaseLabel.setJustificationType(juce::Justification::centred);
+    releaseLabel.setColour(juce::Label::textColourId, juce::Colours::white);
+    addAndMakeVisible(releaseLabel);
+
+    configureSliderTwoDecimals(attackSlider);
+    configureSliderTwoDecimals(decaySlider);
+    configureSliderTwoDecimals(sustainSlider);
+    configureSliderTwoDecimals(releaseSlider);
+
+    // label styling
+    for (auto* label : { &masterGainLabel, &detuneLabel, &pitchShiftLabel, &panLabel, &fmLabel })
+    {
+        label->setColour (juce::Label::textColourId, juce::Colours::white);
+        label->setJustificationType (juce::Justification::centred);
+    }
 }
 
+AudioPluginAudioProcessorEditor::~AudioPluginAudioProcessorEditor() = default;
+
 //==============================================================================
+
+
 void AudioPluginAudioProcessorEditor::paint (juce::Graphics& g)
 {
-    g.fillAll(juce::Colours::black);
+    g.fillAll (juce::Colours::black);
 }
-//==============================================================================
+
 void AudioPluginAudioProcessorEditor::resized()
 {
-    auto area = getLocalBounds().reduced(15);
+    auto area = getLocalBounds().reduced (20);
 
-    // ======================
-    // TOP: Oscillators
-    // ======================
-    auto oscArea = area.removeFromTop(200);
+    // top row: master gain, pan, FM
+    auto topRow = area.removeFromTop (160);
+    const int knobWidth = 140;
 
-    auto row = oscArea.removeFromTop(180);
-    auto dialWidth = 120;
+    auto mgArea = topRow.removeFromLeft (knobWidth);
+    masterGainLabel.setBounds (mgArea.removeFromTop (20));
+    masterGainSlider.setBounds (mgArea);
 
-    baseFreqSlider .setBounds(row.removeFromLeft(dialWidth));
-    osc1GainSlider .setBounds(row.removeFromLeft(dialWidth));
-    osc2GainSlider .setBounds(row.removeFromLeft(dialWidth));
-    detuneSlider   .setBounds(row.removeFromLeft(dialWidth));
-    pitchShiftSlider.setBounds(row.removeFromLeft(dialWidth));
-    harmonicsSlider.setBounds(row.removeFromLeft(dialWidth));
+    auto panArea = topRow.removeFromLeft (knobWidth);
+    panLabel.setBounds (panArea.removeFromTop (20));
+    panSlider.setBounds (panArea);
 
-    osc2ModeBox.setBounds(oscArea.removeFromLeft(150).reduced(10));
-    playButton.setBounds(oscArea.removeFromLeft(100).reduced(10));
+    auto fmArea = topRow.removeFromLeft (knobWidth);
+    fmLabel.setBounds (fmArea.removeFromTop (20));
+    fmSlider.setBounds (fmArea);
 
-    // ======================
-    // MIDDLE: Envelopes + Filters
-    // ======================
-    auto midArea = area.removeFromTop(180);
-    envelopesGroup.setBounds(midArea.removeFromLeft(getWidth() / 2).reduced(5));
-    filtersGroup.setBounds(midArea.reduced(5));
+    // middle: detune and pitch shift
+    auto midRow = area.removeFromTop (160);
 
-    // ======================
-    // BOTTOM: MIDI + Visualizer
-    // ======================
-    auto bottomArea = area;
-    midiGroup.setBounds(bottomArea.removeFromLeft(getWidth() / 2).reduced(5));
-    visualGroup.setBounds(bottomArea.reduced(5));
+    auto detuneArea = midRow.removeFromLeft (knobWidth);
+    detuneLabel.setBounds (detuneArea.removeFromTop (20));
+    detuneSlider.setBounds (detuneArea);
+
+    auto pitchArea = midRow.removeFromLeft (knobWidth);
+    pitchShiftLabel.setBounds(20, 115, 120, 20);
+    pitchShiftBox.setBounds(20, 135, 120, 24);
+
+    // bottom: play button
+    playButton.setBounds (area.removeFromTop (40).removeFromLeft (120));
+
+    // ADSR layout (4 vertical sliders in a row)
+    int left = 20;
+    int top = 200;
+    int width = 40;
+    int height = 160;
+
+    attackLabel .setBounds(left, top - 20, width, 20);
+    attackSlider.setBounds(left, top, width, height);
+
+    left += 50;
+    decayLabel .setBounds(left, top - 20, width, 20);
+    decaySlider.setBounds(left, top, width, height);
+
+    left += 50;
+    sustainLabel .setBounds(left, top - 20, width, 20);
+    sustainSlider.setBounds(left, top, width, height);
+
+    left += 50;
+    releaseLabel .setBounds(left, top - 20, width, 20);
+    releaseSlider.setBounds(left, top, width, height);
 }

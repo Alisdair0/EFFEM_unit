@@ -35,17 +35,19 @@ set(SourceFiles
         Source/PluginProcessor.h
         Source/Square.cpp
         Source/Square.h
-        Source/SineWave.cpp
-        Source/SineWave.h
         Source/Oscillator.cpp
         Source/Oscillator.h
+        Source/SynthVoice.cpp
+        Source/SynthVoice.h
+        Source/SynthSound.cpp
+        Source/SynthSound.h
 )
 
 # Change these to your own preferences
 juce_add_plugin(${PROJECT_NAME}
         COMPANY_NAME alisdair0
         IS_SYNTH TRUE
-        NEEDS_MIDI_INPUT FALSE
+        NEEDS_MIDI_INPUT TRUE
         NEEDS_MIDI_OUTPUT FALSE
         IS_MIDI_EFFECT FALSE
         EDITOR_WANTS_KEYBOARD_FOCUS FALSE

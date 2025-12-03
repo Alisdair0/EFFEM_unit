@@ -9,6 +9,7 @@ class AudioPluginAudioProcessorEditor final : public juce::AudioProcessorEditor
 {
 public:
     explicit AudioPluginAudioProcessorEditor (AudioPluginAudioProcessor&);
+    ~AudioPluginAudioProcessorEditor() override;
 
     void paint (juce::Graphics&) override;
     void resized() override;
@@ -16,48 +17,59 @@ public:
 private:
     AudioPluginAudioProcessor& processorRef;
 
-    // ======================
-    // OSCILLATOR CONTROLS
-    // ======================
-    juce::Slider baseFreqSlider;
-    juce::Label baseFreqLabel { "BaseFreqLabel", "Base Frequency" };
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> baseFreqAttachment;
+    // Play
+    juce::ToggleButton playButton { "Play" };
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> playAttachment;
 
-    juce::Slider osc1GainSlider;
-    juce::Label osc1GainLabel { "Osc1GainLabel", "Osc 1 Gain" };
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> osc1GainAttachment;
+    // Master Gain
+    juce::Slider masterGainSlider;
+    juce::Label masterGainLabel { "MasterGainLabel", "Master Gain" };
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> masterGainAttachment;
 
-    juce::Slider osc2GainSlider;
-    juce::Label osc2GainLabel { "Osc2GainLabel", "Osc 2 Gain" };
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> osc2GainAttachment;
-
+    // Detune (vertical)
     juce::Slider detuneSlider;
     juce::Label detuneLabel { "DetuneLabel", "Detune (cents)" };
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> detuneAttachment;
 
-    juce::Slider pitchShiftSlider;
-    juce::Label pitchShiftLabel { "PitchShiftLabel", "Pitch Shift (st)" };
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> pitchShiftAttachment;
+    // Pitch Shift (combo)
+    juce::ComboBox pitchShiftBox;
+    juce::Label pitchShiftLabel { "PitchShiftLabel", "Pitch Shift" };
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> pitchShiftAttachment;
 
-    juce::Slider harmonicsSlider;
-    juce::Label harmonicsLabel { "HarmonicsLabel", "Harmonics" };
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> harmonicsAttachment;
+    // Pan
+    juce::Slider panSlider;
+    juce::Label panLabel { "PanLabel", "Pan" };
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> panAttachment;
 
-    juce::ComboBox osc2ModeBox;
-    juce::Label osc2ModeLabel { "Osc2ModeLabel", "Osc 2 Mode" };
-    std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> osc2ModeAttachment;
+    // FM Amount
+    juce::Slider fmSlider;
+    juce::Label fmLabel { "FMLabel", "FM Amount" };
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> fmAttachment;
 
-    juce::ToggleButton playButton { "Play" };
-    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> playAttachment;
+    // ADSR sliders + labels
+    juce::Slider attackSlider, decaySlider, sustainSlider, releaseSlider;
 
-    // ======================
-    // FUTURE UI SECTIONS
-    // (MIDI, ADSR, FILTERS, VISUALIZER)
-    // ======================
-    juce::GroupComponent envelopesGroup { "envGroup", "Envelopes (Coming Soon)" };
-    juce::GroupComponent filtersGroup   { "filterGroup", "Filters (Coming Soon)" };
-    juce::GroupComponent midiGroup      { "midiGroup", "MIDI Settings (Coming Soon)" };
-    juce::GroupComponent visualGroup    { "visualGroup", "Visualizer (Coming Soon)" };
+    juce::Label attackLabel  { "attackLabel",  "A" };
+    juce::Label decayLabel   { "decayLabel",   "D" };
+    juce::Label sustainLabel { "sustainLabel", "S" };
+    juce::Label releaseLabel { "releaseLabel", "R" };
+
+    // attachments
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> attackAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> decayAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> sustainAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> releaseAttachment;
+
+    // Filters
+    juce::Label filterLabel;
+    juce::ComboBox filterType;
+
+    juce::Slider cutoffSlider;
+    juce::Slider resonanceSlider;
+
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> filterTypeAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> cutoffAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> resonanceAttachment;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AudioPluginAudioProcessorEditor)
 };
