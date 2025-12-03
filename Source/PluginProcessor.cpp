@@ -86,28 +86,25 @@ void AudioPluginAudioProcessor::changeProgramName (int index, const juce::String
 }
 
 //==============================================================================
-void AudioPluginAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
+void AudioPluginAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
-    // Called when plugin is instantiated
-    // or when the sample rate changes to ensure equality
+    osc1.prepare(sampleRate, samplesPerBlock, getTotalNumOutputChannels());
+    osc2.prepare(sampleRate, samplesPerBlock, getTotalNumOutputChannels());
 
-    // Use this method as the place to do any pre-playback
-    // initialisation that you need..
-    juce::ignoreUnused (sampleRate, samplesPerBlock);
-    //sinewave.prepare(sampleRate, getTotalNumOutputChannels());
+    osc1.setWaveform(0);
+    osc2.setWaveform(0);
 
-    juce::dsp::ProcessSpec spec;
-    spec.sampleRate = sampleRate;
-    spec.maximumBlockSize = samplesPerBlock;
-    spec.numChannels = getTotalNumOutputChannels();
+    // Parameter pointers
+    osc1GainParam = state.getRawParameterValue("osc1Gain");
+    osc2GainParam = state.getRawParameterValue("osc2Gain");
 
-    osc.prepare (sampleRate, samplesPerBlock, getTotalNumOutputChannels());
-    osc.setFrequency(440.0f);
-    osc.setGain(0.5f);
-    osc.setWaveform(0);
+    detuneParam   = state.getRawParameterValue("detune");
+    pitchParam    = state.getRawParameterValue("pitchShift");
+    harmonicsParam= state.getRawParameterValue("harmonics");
+    osc2ModeParam = state.getRawParameterValue("osc2Mode");
 
     frequencyParam = state.getRawParameterValue("freqHz");
-    playParam = state.getRawParameterValue("play");
+    playParam      = state.getRawParameterValue("play");
 }
 
 void AudioPluginAudioProcessor::releaseResources()
@@ -140,47 +137,60 @@ bool AudioPluginAudioProcessor::isBusesLayoutSupported (const BusesLayout& layou
   #endif
 }
 
-void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
-                                              juce::MidiBuffer& midiMessages)
+void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
+                                             juce::MidiBuffer& midiMessages)
 {
-    juce::ignoreUnused (midiMessages);
+    juce::ignoreUnused(midiMessages);
 
-    juce::ScopedNoDenormals noDenormals;
-    auto totalNumInputChannels  = getTotalNumInputChannels();
-    auto totalNumOutputChannels = getTotalNumOutputChannels();
+    buffer.clear();
 
-    // In case we have more outputs than inputs, this code clears any output
-    // channels that didn't contain input data, (because these aren't
-    // guaranteed to be empty - they may contain garbage).
-    // This is here to avoid people getting screaming feedback
-    // when they first compile a plugin, but obviously you don't need to keep
-    // this code if your algorithm always overwrites all the output channels.
-    for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
-        buffer.clear (i, 0, buffer.getNumSamples());
+    if (! playParam->load())
+        return;
 
+    float baseFreq = frequencyParam->load();
+    float detuned  = baseFreq + detuneParam->load();
 
+    // pitch shift in semitones
+    float pitchFactor = std::pow(2.0f, pitchParam->load() / 12.0f);
 
-    // This is the place where you'd normally do the guts of your plugin's
-    // audio processing...
+    // Apply harmonics later
 
-    // const float freq = frequencyParam->load();
-    // const bool shouldBePlaying = static_cast<bool>(playParam->load());
+    osc1.setFrequency(detuned * pitchFactor);
+    osc2.setFrequency(detuned * pitchFactor);
 
-    for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
-        buffer.clear (i, 0, buffer.getNumSamples());
-
-    osc.process (buffer);
-
-    // Make sure to reset the state if your inner loop is processing
-    // the samples and the outer loop is handling the channels.
-    // Alternatively, you can process the samples with the channels
-    // interleaved by keeping the same state.
-    for (int channel = 0; channel < totalNumInputChannels; ++channel)
+    // Mode switch for osc2
+    switch ((int)osc2ModeParam->load())
     {
-        auto* channelData = buffer.getWritePointer (channel);
-        juce::ignoreUnused (channelData);
-        // ..do something to the data...
+        case 1: osc2.setFrequency(baseFreq / 2.0f); break;   // SUB
+        case 2: osc2.setFrequency(baseFreq * 1.5f); break;   // FIFTH
+        default: break;
     }
+
+    osc1.setGain(osc1GainParam->load());
+    osc2.setGain(osc2GainParam->load());
+
+    // temp buffers
+    juce::AudioBuffer<float> osc1Buf, osc2Buf;
+    osc1Buf.setSize(buffer.getNumChannels(), buffer.getNumSamples());
+    osc2Buf.setSize(buffer.getNumChannels(), buffer.getNumSamples());
+    osc1Buf.clear();
+    osc2Buf.clear();
+
+    osc1.process(osc1Buf);
+    osc2.process(osc2Buf);
+
+    // Mix oscillators
+    for (int ch = 0; ch < buffer.getNumChannels(); ++ch)
+    {
+        auto* out = buffer.getWritePointer(ch);
+        auto* o1  = osc1Buf.getReadPointer(ch);
+        auto* o2  = osc2Buf.getReadPointer(ch);
+
+        for (int i = 0; i < buffer.getNumSamples(); ++i)
+            out[i] = o1[i] + o2[i];
+    }
+
+    // TO DO: apply harmonics processing
 }
 
 //==============================================================================
@@ -218,12 +228,15 @@ juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 }
 
 juce::AudioProcessorValueTreeState::ParameterLayout  AudioPluginAudioProcessor::createParameters() {
-
     return {
-        std::make_unique<juce::AudioParameterFloat>(juce::ParameterID { "freqHz" }, "Frequency", 20.0f, 20000.0f, 220.0f ),
-        std::make_unique<juce::AudioParameterBool>(juce::ParameterID { "play" }, "Play", true)
-        //std::make_unique<juce::AudioParameterBool>(juce::ParameterID { "isPlaying" }, "Is Playing", true)
+        std::make_unique<juce::AudioParameterFloat>("freqHz", "Frequency", 20.0f, 20000.0f, 220.0f),
+        std::make_unique<juce::AudioParameterBool>("play", "Play", true),
 
-
+        std::make_unique<juce::AudioParameterFloat>("osc1Gain", "Osc 1 Gain", 0.0f, 1.0f, 0.8f),
+        std::make_unique<juce::AudioParameterFloat>("osc2Gain", "Osc 2 Gain", 0.0f, 1.0f, 0.4f),
+        std::make_unique<juce::AudioParameterFloat>("detune", "Detune", -50.0f, 50.0f, 0.0f),
+        std::make_unique<juce::AudioParameterFloat>("pitchShift", "Pitch Shift (Semitones)", -24.0f, 24.0f, 0.0f),
+        std::make_unique<juce::AudioParameterFloat>("harmonics", "Harmonics", 1.0f, 10.0f, 1.0f),
+        std::make_unique<juce::AudioParameterChoice>("osc2Mode", "Osc 2 Mode", juce::StringArray{ "Normal", "Sub", "Fifth" }, 0)
     };
 }

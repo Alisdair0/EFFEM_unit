@@ -3,73 +3,111 @@
 
 //==============================================================================
 AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor (AudioPluginAudioProcessor& p)
-    : AudioProcessorEditor (&p),
-      processorRef (p),
-      freqSliderAttachment(processorRef.getState(), "freqHz", frequencySlider),
-      playButtomAttachment(processorRef.getState(), "play", playButton)
+    : AudioProcessorEditor (&p), processorRef(p)
 {
-    juce::ignoreUnused (processorRef);
-    // Make sure that before the constructor has finished, you've set the
-    // Make sure that before the constructor has finished, you've set the
-    // editor's size to whatever you need it to be.
+    setSize (900, 600);
 
-    //addAndMakeVisible (square);
+    auto& state = processorRef.getState();
 
-    frequencySlider.setSliderStyle(juce::Slider::SliderStyle::LinearVertical);
-    frequencySlider.setTextBoxStyle(juce::Slider::TextBoxBelow, true, 50, 25);
-    //frequencySlider.setRange(0.0f, 1.0f, 0.01f);
-    addAndMakeVisible(frequencySlider);
+    // ======================
+    // OSCILLATOR UI CREATION
+    // ======================
 
-    // freqSliderAttachment = std::make_unique<
-    //     juce::AudioProcessorValueTreeState::SliderAttachment>(
-    //         processorRef.getState(), "freqHz", frequencySlider);
+    baseFreqSlider.setSliderStyle(juce::Slider::Rotary);
+    baseFreqSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 70, 20);
+    addAndMakeVisible(baseFreqSlider);
+    addAndMakeVisible(baseFreqLabel);
+    baseFreqAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(state, "freqHz", baseFreqSlider);
 
-    playButton.setButtonText("Playing");
-    playButton.setToggleState(true, juce::NotificationType::dontSendNotification);
-    playButton.setClickingTogglesState(true);
+    osc1GainSlider.setSliderStyle(juce::Slider::Rotary);
+    osc1GainSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 70, 20);
+    addAndMakeVisible(osc1GainSlider);
+    addAndMakeVisible(osc1GainLabel);
+    osc1GainAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(state, "osc1Gain", osc1GainSlider);
 
-    playButton.setColour(juce::TextButton::ColourIds::buttonOnColourId, juce::Colours::green);
-    playButton.setColour(juce::TextButton::ColourIds::buttonColourId, juce::Colours::red);
+    osc2GainSlider.setSliderStyle(juce::Slider::Rotary);
+    osc2GainSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 70, 20);
+    addAndMakeVisible(osc2GainSlider);
+    addAndMakeVisible(osc2GainLabel);
+    osc2GainAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(state, "osc2Gain", osc2GainSlider);
 
-    playButton.onClick = [this]()
-    {
-        // Change the state of button when it's clicked
-        const bool isPlaying = playButton.getToggleState();
-        playButton.setButtonText(isPlaying ? "Playing" : "Bypassed");
-    };
+    detuneSlider.setSliderStyle(juce::Slider::Rotary);
+    detuneSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 70, 20);
+    addAndMakeVisible(detuneSlider);
+    addAndMakeVisible(detuneLabel);
+    detuneAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(state, "detune", detuneSlider);
+
+    pitchShiftSlider.setSliderStyle(juce::Slider::Rotary);
+    pitchShiftSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 70, 20);
+    addAndMakeVisible(pitchShiftSlider);
+    addAndMakeVisible(pitchShiftLabel);
+    pitchShiftAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(state, "pitchShift", pitchShiftSlider);
+
+    harmonicsSlider.setSliderStyle(juce::Slider::Rotary);
+    harmonicsSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 70, 20);
+    addAndMakeVisible(harmonicsSlider);
+    addAndMakeVisible(harmonicsLabel);
+    harmonicsAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(state, "harmonics", harmonicsSlider);
+
+    osc2ModeBox.addItem("Normal", 1);
+    osc2ModeBox.addItem("Sub", 2);
+    osc2ModeBox.addItem("Fifth", 3);
+    addAndMakeVisible(osc2ModeBox);
+    addAndMakeVisible(osc2ModeLabel);
+    osc2ModeAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(state, "osc2Mode", osc2ModeBox);
 
     addAndMakeVisible(playButton);
+    playAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(state, "play", playButton);
 
-    //frequencyLabel.setColour(juce::Label::ColourIds::outlineColourId, juce::Colours::white); //outline color
-    frequencyLabel.setJustificationType(juce::Justification::centred);;
-    addAndMakeVisible(frequencyLabel);
+    // ======================
+    // FUTURE UI SECTIONS
+    // ======================
 
-    setSize (400, 400);
-}
-
-AudioPluginAudioProcessorEditor::~AudioPluginAudioProcessorEditor()
-{
+    addAndMakeVisible(envelopesGroup);
+    addAndMakeVisible(filtersGroup);
+    addAndMakeVisible(midiGroup);
+    addAndMakeVisible(visualGroup);
 }
 
 //==============================================================================
 void AudioPluginAudioProcessorEditor::paint (juce::Graphics& g)
 {
-    // (Our component is opaque, so we must completely fill the background with a solid colour)
-    g.fillAll (getLookAndFeel().findColour (juce::ResizableWindow::backgroundColourId));
-    //g.fillAll (juce::Colours::black);
-
-    g.setColour (juce::Colours::white);
-    g.setFont (15.0f);
-    //g.drawFittedText (""
-    //                  "EFFEM", getLocalBounds(), juce::Justification::centred, 1);
+    g.fillAll(juce::Colours::black);
 }
-
+//==============================================================================
 void AudioPluginAudioProcessorEditor::resized()
 {
-    // This is generally where you'll want to lay out the positions of any
-    // subcomponents in your editor.
-    //square.setBounds (100, 100, 200, 200);
-    frequencyLabel.setBounds(getWidth() / 2 - 50, getHeight() / 2 - 120, 100, 20);
-    frequencySlider.setBounds (getWidth() / 2 - 50, getHeight() / 2 - 100, 100, 200);
-    playButton.setBounds (getWidth() / 2 - 50, getHeight() / 2 + 120, 100, 20);
+    auto area = getLocalBounds().reduced(15);
+
+    // ======================
+    // TOP: Oscillators
+    // ======================
+    auto oscArea = area.removeFromTop(200);
+
+    auto row = oscArea.removeFromTop(180);
+    auto dialWidth = 120;
+
+    baseFreqSlider .setBounds(row.removeFromLeft(dialWidth));
+    osc1GainSlider .setBounds(row.removeFromLeft(dialWidth));
+    osc2GainSlider .setBounds(row.removeFromLeft(dialWidth));
+    detuneSlider   .setBounds(row.removeFromLeft(dialWidth));
+    pitchShiftSlider.setBounds(row.removeFromLeft(dialWidth));
+    harmonicsSlider.setBounds(row.removeFromLeft(dialWidth));
+
+    osc2ModeBox.setBounds(oscArea.removeFromLeft(150).reduced(10));
+    playButton.setBounds(oscArea.removeFromLeft(100).reduced(10));
+
+    // ======================
+    // MIDDLE: Envelopes + Filters
+    // ======================
+    auto midArea = area.removeFromTop(180);
+    envelopesGroup.setBounds(midArea.removeFromLeft(getWidth() / 2).reduced(5));
+    filtersGroup.setBounds(midArea.reduced(5));
+
+    // ======================
+    // BOTTOM: MIDI + Visualizer
+    // ======================
+    auto bottomArea = area;
+    midiGroup.setBounds(bottomArea.removeFromLeft(getWidth() / 2).reduced(5));
+    visualGroup.setBounds(bottomArea.reduced(5));
 }

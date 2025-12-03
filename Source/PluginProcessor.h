@@ -48,19 +48,17 @@ public:
 
 
 private:
-    Oscillator osc1;
-    Oscillator osc2;
+    Oscillator osc1, osc2;
 
     std::atomic<float>* frequencyParam = nullptr;
     std::atomic<float>* playParam = nullptr;
 
-
     std::atomic<float>* osc1GainParam = nullptr;
     std::atomic<float>* osc2GainParam = nullptr;
-    std::atomic<float>* osc2DetuneCentsParam = nullptr;
-    std::atomic<float>* quickPitchSemitonesParam = nullptr;
+    std::atomic<float>* detuneParam = nullptr;
+    std::atomic<float>* pitchParam = nullptr;
     std::atomic<float>* harmonicsParam = nullptr;
-    std::atomic<float>* osc2ModeParam = nullptr; // 0 = detune, 1 = harmonic
+    std::atomic<float>* osc2ModeParam = nullptr;
 
     //SineWave sinewave;
     juce::AudioProcessorValueTreeState state;

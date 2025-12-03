@@ -8,6 +8,7 @@
 #pragma once
 #include <juce_dsp/juce_dsp.h>
 
+
 class Oscillator {
 public:
     Oscillator();
@@ -18,9 +19,9 @@ public:
     //call from processBlock
     void process (juce::AudioBuffer<float>& buffer);
 
-    void setFrequency(float newFreq);
+    void setFrequency(float freq);
     void setGain (float newGain);
-    void setWaveform(int waveformIndex);
+    void setWaveform(int type);
 
 private:
     juce::dsp::Oscillator<float> osc;
