@@ -37,6 +37,8 @@ set(SourceFiles
         Source/Square.h
         Source/SineWave.cpp
         Source/SineWave.h
+        Source/Oscillator.cpp
+        Source/Oscillator.h
 )
 
 # Change these to your own preferences

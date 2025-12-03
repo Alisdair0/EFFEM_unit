@@ -1,5 +1,6 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
+#include <cmath>
 
 //==============================================================================
 AudioPluginAudioProcessor::AudioPluginAudioProcessor()
@@ -93,7 +94,17 @@ void AudioPluginAudioProcessor::prepareToPlay (double sampleRate, int samplesPer
     // Use this method as the place to do any pre-playback
     // initialisation that you need..
     juce::ignoreUnused (sampleRate, samplesPerBlock);
-    sinewave.prepare(sampleRate, getTotalNumOutputChannels());
+    //sinewave.prepare(sampleRate, getTotalNumOutputChannels());
+
+    juce::dsp::ProcessSpec spec;
+    spec.sampleRate = sampleRate;
+    spec.maximumBlockSize = samplesPerBlock;
+    spec.numChannels = getTotalNumOutputChannels();
+
+    osc.prepare (sampleRate, samplesPerBlock, getTotalNumOutputChannels());
+    osc.setFrequency(440.0f);
+    osc.setGain(0.5f);
+    osc.setWaveform(0);
 
     frequencyParam = state.getRawParameterValue("freqHz");
     playParam = state.getRawParameterValue("play");
@@ -152,14 +163,13 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     // This is the place where you'd normally do the guts of your plugin's
     // audio processing...
 
-    const float freq = frequencyParam->load();
-    const bool shouldBePlaying = static_cast<bool>(playParam->load());
+    // const float freq = frequencyParam->load();
+    // const bool shouldBePlaying = static_cast<bool>(playParam->load());
 
-    sinewave.setFrequency(freq);
-    sinewave.setAmplitude(shouldBePlaying ? 0.4f : 0.0f );
+    for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
+        buffer.clear (i, 0, buffer.getNumSamples());
 
-    sinewave.process(buffer);
-
+    osc.process (buffer);
 
     // Make sure to reset the state if your inner loop is processing
     // the samples and the outer loop is handling the channels.

@@ -4,9 +4,9 @@
 ### Synthesizer built with JUCE using CMake. 
 
 Options
-- Choose between multiple waveforms, 
+- Choose between multiple waveforms
 - Adjust envelopes and filters
-- Visualize sound design in real time.
+- Visualize sound design in real time
 
 Usage
 - Accepts MIDI input and allows for a continuous trigger setting as well. 

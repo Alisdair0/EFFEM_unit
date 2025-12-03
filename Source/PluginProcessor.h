@@ -1,7 +1,7 @@
 #pragma once
 
 #include <juce_audio_processors/juce_audio_processors.h>
-#include "SineWave.h"
+#include "Oscillator.h"
 
 //==============================================================================
 class AudioPluginAudioProcessor final : public juce::AudioProcessor
@@ -48,12 +48,25 @@ public:
 
 
 private:
+    Oscillator osc1;
+    Oscillator osc2;
 
-    SineWave sinewave;
+    std::atomic<float>* frequencyParam = nullptr;
+    std::atomic<float>* playParam = nullptr;
+
+
+    std::atomic<float>* osc1GainParam = nullptr;
+    std::atomic<float>* osc2GainParam = nullptr;
+    std::atomic<float>* osc2DetuneCentsParam = nullptr;
+    std::atomic<float>* quickPitchSemitonesParam = nullptr;
+    std::atomic<float>* harmonicsParam = nullptr;
+    std::atomic<float>* osc2ModeParam = nullptr; // 0 = detune, 1 = harmonic
+
+    //SineWave sinewave;
     juce::AudioProcessorValueTreeState state;
+
     juce::AudioProcessorValueTreeState::ParameterLayout createParameters();
-    std::atomic<float>* frequencyParam;
-    std::atomic<float>* playParam;
+
 
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AudioPluginAudioProcessor)
