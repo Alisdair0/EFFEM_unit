@@ -5,11 +5,14 @@
 
 Options
 - Choose between multiple waveforms
+- Adjust pitch and detune settings
 - Adjust envelopes and filters
 - Visualize sound design in real time
 
 Usage
-- Accepts MIDI input and allows for a continuous trigger setting as well. 
+- Accepts MIDI input
+- Experiment with frequency modulation
+  - f(t) = 440 Hz + (modulator_sample × FM_amount)
 - Usable as a standalone VST3 plugin or added audio plugin within digital audio workstations.
 
 Citations:

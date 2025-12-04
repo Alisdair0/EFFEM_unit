@@ -48,6 +48,23 @@ public:
 
     juce::AudioProcessorValueTreeState& getState() { return state; }
 
+    // Visualizer
+    static constexpr int scopeSize = 512;   // oscilloscope resolution
+
+    std::atomic<int> scopeWritePos { 0 };
+    std::array<float, scopeSize> scopeData {};
+
+    // Call this for each sample to feed the oscilloscope
+    inline void pushNextSampleIntoScope(float sample)
+    {
+        int index = scopeWritePos.load(std::memory_order_relaxed);
+
+        scopeData[index] = sample;
+
+        index = (index + 1) % scopeSize;
+
+        scopeWritePos.store(index, std::memory_order_relaxed);
+    }
 
 private:
     juce::Synthesiser synth;
@@ -78,6 +95,26 @@ private:
 
     juce::AudioProcessorValueTreeState state;
     juce::AudioProcessorValueTreeState::ParameterLayout createParameters();
+
+    // OSC1 parameters
+    std::atomic<float>* osc1OnParam      = nullptr;
+    std::atomic<float>* osc1WaveParam    = nullptr;
+    std::atomic<float>* osc1PitchParam   = nullptr;
+    std::atomic<float>* osc1DetuneParam  = nullptr;
+    std::atomic<float>* osc1GainParam    = nullptr;
+    std::atomic<float>* osc1FmParam      = nullptr;
+
+    // OSC2 parameters
+    std::atomic<float>* osc2OnParam      = nullptr;
+    std::atomic<float>* osc2WaveParam    = nullptr;
+    std::atomic<float>* osc2PitchParam   = nullptr;
+    std::atomic<float>* osc2DetuneParam  = nullptr;
+    std::atomic<float>* osc2GainParam    = nullptr;
+    std::atomic<float>* osc2FmParam      = nullptr;
+
+    // Blend
+    std::atomic<float>* blendParam       = nullptr;
+
 
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AudioPluginAudioProcessor)

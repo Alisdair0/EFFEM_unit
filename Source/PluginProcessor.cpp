@@ -2,6 +2,11 @@
 #include "PluginEditor.h"
 #include <cmath>
 
+static constexpr float pitchTable[9] =
+{
+    -12.f, -7.f, 0.f, +7.f, +12.f
+};
+
 //==============================================================================
 AudioPluginAudioProcessor::AudioPluginAudioProcessor()
     : AudioProcessor (BusesProperties()
@@ -108,10 +113,11 @@ void AudioPluginAudioProcessor::prepareToPlay (double sampleRate, int samplesPer
     // Buttons & sliders
     playParam = state.getRawParameterValue ("play");
     masterGainParam = state.getRawParameterValue ("masterGain");
-    detuneParam = state.getRawParameterValue ("detune");
     pitchChoiceParam = state.getRawParameterValue ("pitchShift");
     panParam = state.getRawParameterValue ("pan");
-    fmAmountParam = state.getRawParameterValue ("fmAmount");
+    osc1FmParam = state.getRawParameterValue ("osc1FM");
+    osc2FmParam = state.getRawParameterValue ("osc2FM");
+    fmAmountParam   = state.getRawParameterValue("fmAmount");
 
     // Envelopes
     attackParam  = state.getRawParameterValue ("attack");
@@ -123,6 +129,25 @@ void AudioPluginAudioProcessor::prepareToPlay (double sampleRate, int samplesPer
     filterCutoffParam    = state.getRawParameterValue("filterCutoff");
     filterResonanceParam = state.getRawParameterValue("filterResonance");
     filterTypeParam      = state.getRawParameterValue("filterType");
+
+    // osc 1
+    osc1OnParam     = state.getRawParameterValue("osc1On");
+    osc1WaveParam   = state.getRawParameterValue("osc1Wave");
+    osc1PitchParam  = state.getRawParameterValue("osc1Pitch");
+    osc1DetuneParam = state.getRawParameterValue("osc1Detune");
+    osc1GainParam   = state.getRawParameterValue("osc1Gain");
+    osc1FmParam     = state.getRawParameterValue("osc1FM");
+
+    // osc 2
+    osc2OnParam     = state.getRawParameterValue("osc2On");
+    osc2WaveParam   = state.getRawParameterValue("osc2Wave");
+    osc2PitchParam  = state.getRawParameterValue("osc2Pitch");
+    osc2DetuneParam = state.getRawParameterValue("osc2Detune");
+    osc2GainParam   = state.getRawParameterValue("osc2Gain");
+    osc2FmParam     = state.getRawParameterValue("osc2FM");
+
+    // blend
+    blendParam      = state.getRawParameterValue("oscBlend");
 }
 
 
@@ -161,84 +186,160 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
 {
     juce::ScopedNoDenormals noDenormals;
 
-    const auto totalNumInputChannels  = getTotalNumInputChannels();
-    const auto totalNumOutputChannels = getTotalNumOutputChannels();
-
-    for (int ch = totalNumInputChannels; ch < totalNumOutputChannels; ++ch)
-        buffer.clear (ch, 0, buffer.getNumSamples());
-
     buffer.clear();
 
-    // read global parameters
-    const float masterGain = masterGainParam ? masterGainParam->load() : 0.8f;
-    const float detuneCents= detuneParam ? detuneParam->load() : 0.0f;
-    const float pan = panParam ? panParam->load() : 0.0f;
-    const float fmAmount = fmAmountParam ? fmAmountParam->load() : 0.0f;
+    // ===================== READ ALL OSC PARAMETERS ===================== //
 
-    const float attack  = attackParam  ? attackParam->load()  : 0.01f;
-    const float decay   = decayParam   ? decayParam->load()   : 0.1f;
-    const float sustain = sustainParam ? sustainParam->load() : 0.8f;
-    const float release = releaseParam ? releaseParam->load() : 0.2f;
+    auto* osc1OnParam   = state.getRawParameterValue("osc1On");
+    auto* osc2OnParam   = state.getRawParameterValue("osc2On");
 
-    const float cutoff    = filterCutoffParam    ? filterCutoffParam->load()    : 1000.0f;
-    const float resonance = filterResonanceParam ? filterResonanceParam->load() : 0.2f;
-    const int   type      = filterTypeParam      ? (int)filterTypeParam->load() : 0;
+    auto* osc1WaveParam = state.getRawParameterValue("osc1Wave");
+    auto* osc2WaveParam = state.getRawParameterValue("osc2Wave");
 
-    auto* wfParam = state.getRawParameterValue ("waveform");
-    int waveformIndex = 0;
+    auto* osc1PitchParam = state.getRawParameterValue("osc1Pitch");
+    auto* osc2PitchParam = state.getRawParameterValue("osc2Pitch");
 
-    if (wfParam != nullptr)
-        waveformIndex = (int) std::round (*wfParam);
+    auto* osc1DetuneParam = state.getRawParameterValue("osc1Detune");
+    auto* osc2DetuneParam = state.getRawParameterValue("osc2Detune");
 
-    int pitchIndex = (int) pitchChoiceParam->load();
-    int mappedIndex = pitchIndex - 1;  // -> 0, 1, 2
-    float pitchShiftSemis = mappedIndex * 12.0f;
+    auto* osc1GainParam = state.getRawParameterValue("osc1Gain");
+    auto* osc2GainParam = state.getRawParameterValue("osc2Gain");
 
-    if (pitchChoiceParam != nullptr)
-        pitchIndex = (int) std::round (pitchChoiceParam->load());
+    auto* blendParam = state.getRawParameterValue("oscBlend");
 
-    auto* w1p = state.getRawParameterValue("osc1Waveform");
-    auto* w2p = state.getRawParameterValue("osc2Waveform");
-    auto* blp = state.getRawParameterValue("oscBlend");
+    // ===================== ADSR / FILTER / GLOBAL ===================== //
 
-    int wave1 = w1p ? (int)*w1p : 0;
-    int wave2 = w2p ? (int)*w2p : 0;
-    float blendAmount = blp ? (float)*blp : 0.5f;
+    float attack  = *state.getRawParameterValue("attack");
+    float decay   = *state.getRawParameterValue("decay");
+    float sustain = *state.getRawParameterValue("sustain");
+    float release = *state.getRawParameterValue("release");
 
-    // update all voices with these params
-    for (int i = 0; i < synth.getNumVoices(); ++i)
+    float cutoff    = *state.getRawParameterValue("filterCutoff");
+    float resonance = *state.getRawParameterValue("filterResonance");
+    int   filterType= (int)*state.getRawParameterValue("filterType");
+
+    float pan = *state.getRawParameterValue("pan");
+
+    // ===================== MAP RAW PARAMETERS ===================== //
+
+    // On/off (bool)
+    bool osc1On  = osc1OnParam ? (bool)*osc1OnParam : true;
+    bool osc2On  = osc2OnParam ? (bool)*osc2OnParam : true;
+
+    // Waveforms (choice -> int)
+    int wave1 = osc1WaveParam ? (int) std::round(*osc1WaveParam) : 0;
+    int wave2 = osc2WaveParam ? (int) std::round(*osc2WaveParam) : 0;
+
+    // Pitch (choice -> int)
+    int pitch1 = osc1PitchParam ? (int) std::round(*osc1PitchParam) : 4;  // index 4 = "0"
+    int pitch2 = osc2PitchParam ? (int) std::round(*osc2PitchParam) : 4;
+
+    float detune1 = osc1DetuneParam ? osc1DetuneParam->load() : 0.0f;
+    float detune2 = osc2DetuneParam ? osc2DetuneParam->load() : 0.0f;
+
+    float gain1   = osc1GainParam   ? osc1GainParam->load()   : 0.8f;
+    float gain2   = osc2GainParam   ? osc2GainParam->load()   : 0.8f;
+
+    float blend   = blendParam      ? blendParam->load()      : 0.5f;
+
+    float masterFM = fmAmountParam ? fmAmountParam->load() : 0.0f;
+
+    float fm1 = osc1FmParam ? osc1FmParam->load() : 0.0f;
+    float fm2 = osc2FmParam ? osc2FmParam->load() : 0.0f;
+
+    // ===================== VISUALIZER ======================= //
+    for (int ch = 0; ch < buffer.getNumChannels(); ++ch)
     {
-        if (auto* v = dynamic_cast<SynthVoice*> (synth.getVoice (i)))
-        {
-            v->updateFromParameters (masterGain, detuneCents, pitchShiftSemis, fmAmount);
-            v->updateEnvelope       (attack, decay, sustain, release);
-            v->updateFilter         (cutoff, resonance, type);
-            v->updateOscillators(wave1, wave2, blendAmount);
-        }
-    }
-
-    // render synth
-    synth.renderNextBlock (buffer, midiMessages, 0, buffer.getNumSamples());
-
-    // apply pan (simple stereo pan)
-    if (buffer.getNumChannels() >= 2)
-    {
-        const float angle = (pan + 1.0f) * juce::MathConstants<float>::pi / 4.0f;
-        const float leftGain  = std::cos (angle);
-        const float rightGain = std::sin (angle);
-
-        auto* left  = buffer.getWritePointer (0);
-        auto* right = buffer.getWritePointer (1);
-
+        auto* data = buffer.getReadPointer(ch);
         for (int i = 0; i < buffer.getNumSamples(); ++i)
         {
-            left[i]  *= leftGain;
-            right[i] *= rightGain;
+            // Use channel 0 or the average — here we use CH0:
+            if (ch == 0)
+                pushNextSampleIntoScope(data[i]);
         }
     }
 
-    // global mute if play is off
-    if (playParam && ! static_cast<bool> (playParam->load()))
+    // ===================== UPDATE ALL VOICES ===================== //
+
+    for (int i = 0; i < synth.getNumVoices(); ++i)
+    {
+        if (auto* v = dynamic_cast<SynthVoice*>(synth.getVoice(i)))
+        {
+            // waveforms + blend
+            v->updateOscillators(wave1, wave2, blend);
+
+            // oscillator on/off states
+            v->updateOscOnOff(osc1On, osc2On);
+
+            // pitch, detune, gain for each oscillator
+            v->updateFromParameters(
+                gain1, pitch1, detune1,   // osc1 params
+                gain2, pitch2, detune2,   // osc2 params
+                blend                     // blend
+            );
+
+            // envelopes + filters
+            v->updateEnvelope(attack, decay, sustain, release);
+            v->updateFilter(cutoff, resonance, filterType);
+            // FM
+            v->updateFM(fm1, fm2);
+        }
+    }
+
+    // ===================== RENDER SYNTH ===================== //
+
+    synth.renderNextBlock(buffer, midiMessages, 0, buffer.getNumSamples());
+
+    // Visualizer
+    for (int ch = 0; ch < buffer.getNumChannels(); ++ch)
+    {
+        const float* read = buffer.getReadPointer(ch);
+        for (int i = 0; i < buffer.getNumSamples(); ++i)
+        {
+            // Track left channel only (common oscilloscope behavior)
+            if (ch == 0)
+                pushNextSampleIntoScope(read[i]);
+        }
+    }
+
+    // ===================== PAN ===================== //
+
+    if (buffer.getNumChannels() >= 2)
+    {
+        const float angle = (pan + 1.0f) * juce::MathConstants<float>::halfPi * 0.5f;
+        float leftGain  = std::cos(angle);
+        float rightGain = std::sin(angle);
+
+        auto* left  = buffer.getWritePointer(0);
+        auto* right = buffer.getWritePointer(1);
+
+        for (int s = 0; s < buffer.getNumSamples(); ++s)
+        {
+            left[s]  *= leftGain;
+            right[s] *= rightGain;
+        }
+    }
+
+    // Apply master gain AFTER pan and before output
+    float masterGain = masterGainParam ? masterGainParam->load() : 1.0f;
+
+    for (int ch = 0; ch < buffer.getNumChannels(); ++ch)
+    {
+        for (int i = 0; i < buffer.getNumSamples(); ++i)
+        {
+            float s = buffer.getSample(ch, i);
+            pushNextSampleIntoScope(s);
+        }
+        pushNextSampleIntoScope(buffer.getSample(0, 0));
+
+        break; // just take channel 0
+    }
+
+
+
+    // ===================== PLAY PARAM (MUTE) ===================== //
+
+    if (playParam && ! (bool)playParam->load())
         buffer.clear();
 }
 
@@ -257,17 +358,21 @@ juce::AudioProcessorEditor* AudioPluginAudioProcessor::createEditor()
 //==============================================================================
 void AudioPluginAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
 {
-    // You should use this method to store your parameters in the memory block.
-    // You could do that either as raw data, or use the XML or ValueTree classes
-    // as intermediaries to make it easy to save and load complex data.
-    juce::ignoreUnused (destData);
+    auto valueTree = state.copyState();
+
+    std::unique_ptr<juce::XmlElement> xml (valueTree.createXml());
+    copyXmlToBinary(*xml, destData);
 }
 
 void AudioPluginAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
 {
-    // You should use this method to restore your parameters from this memory block,
-    // whose contents will have been created by the getStateInformation() call.
-    juce::ignoreUnused (data, sizeInBytes);
+    std::unique_ptr<juce::XmlElement> xml (getXmlFromBinary(data, sizeInBytes));
+
+    if (xml && xml->hasTagName(state.state.getType()))
+    {
+        auto vt = juce::ValueTree::fromXml(*xml);
+        state.replaceState(vt);
+    }
 }
 
 //==============================================================================
@@ -281,13 +386,8 @@ juce::AudioProcessorValueTreeState::ParameterLayout AudioPluginAudioProcessor::c
 {
     using namespace juce;
     std::vector<std::unique_ptr<RangedAudioParameter>> params;
-    params.push_back (std::make_unique<juce::AudioParameterChoice>(
-    "pitchShift",
-    "Pitch Shift",
-    juce::StringArray{ "+12", "0", "-12" },
-    1));
 
-    // ======= SLIDERS & BUTTONS ====== //
+    // ======= GLOBAL SLIDERS & BUTTONS ====== //
     params.push_back (std::make_unique<AudioParameterBool>(
         "play", "Play", true));
 
@@ -295,10 +395,6 @@ juce::AudioProcessorValueTreeState::ParameterLayout AudioPluginAudioProcessor::c
         "masterGain", "Master Gain",
         NormalisableRange<float> (0.0f, 1.0f, 0.001f, 0.5f),
         0.8f));
-
-    params.push_back (std::make_unique<AudioParameterFloat>(
-        "detune", "Detune (cents)",
-        -100.0f, 100.0f, 0.0f));
 
     params.push_back (std::make_unique<AudioParameterFloat>(
         "pan", "Pan",
@@ -309,61 +405,87 @@ juce::AudioProcessorValueTreeState::ParameterLayout AudioPluginAudioProcessor::c
         0.0f, 10.0f, 0.0f)); // simple frequency-offset style "FM"
 
     // ============== ADSR =================== //
-    params.push_back (std::make_unique<juce::AudioParameterFloat>(
-    "attack", "Attack",
-    juce::NormalisableRange<float> (0.001f, 5.0f, 0.0f, 0.5f),
-    0.01f));
+    params.push_back (std::make_unique<AudioParameterFloat>(
+        "attack", "Attack",
+        NormalisableRange<float> (0.001f, 5.0f, 0.0f, 0.5f),
+        0.01f));
 
-    params.push_back (std::make_unique<juce::AudioParameterFloat>(
+    params.push_back (std::make_unique<AudioParameterFloat>(
         "decay", "Decay",
-        juce::NormalisableRange<float> (0.001f, 5.0f, 0.0f, 0.5f),
+        NormalisableRange<float> (0.001f, 5.0f, 0.0f, 0.5f),
         0.1f));
 
-    params.push_back (std::make_unique<juce::AudioParameterFloat>(
+    params.push_back (std::make_unique<AudioParameterFloat>(
         "sustain", "Sustain",
-        juce::NormalisableRange<float> (0.0f, 1.0f, 0.0f, 1.0f),
+        NormalisableRange<float> (0.0f, 1.0f, 0.0f, 1.0f),
         0.8f));
 
-    params.push_back (std::make_unique<juce::AudioParameterFloat>(
+    params.push_back (std::make_unique<AudioParameterFloat>(
         "release", "Release",
-        juce::NormalisableRange<float> (0.001f, 5.0f, 0.0f, 0.5f),
+        NormalisableRange<float> (0.001f, 5.0f, 0.0f, 0.5f),
         0.2f));
 
     // ========== FILTER CONTROLS ========== //
-    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+    params.push_back(std::make_unique<AudioParameterFloat>(
         "filterCutoff", "Cutoff",
-        juce::NormalisableRange<float>(20.0f, 20000.0f, 1.0f, 0.33f), 1000.0f));
+        NormalisableRange<float>(20.0f, 20000.0f, 1.0f, 0.33f), 1000.0f));
 
-    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+    params.push_back(std::make_unique<AudioParameterFloat>(
         "filterResonance", "Resonance",
-        juce::NormalisableRange<float>(0.1f, 1.5f, 0.001f), 0.2f));
+        NormalisableRange<float>(0.1f, 1.5f, 0.001f), 0.2f));
 
-    params.push_back(std::make_unique<juce::AudioParameterChoice>(
+    params.push_back(std::make_unique<AudioParameterChoice>(
         "filterType", "Filter Type",
-        juce::StringArray { "Lowpass", "Highpass", "Bandpass" },
+        StringArray { "Lowpass", "Highpass", "Bandpass" },
         0     // 0 = LP, 1 = HP, 2 = BP
     ));
 
-    // ================= OSCILLATOR 1 WAVEFORM ================= //
-    params.push_back (std::make_unique<juce::AudioParameterChoice>(
-        "osc1Waveform", "Osc1 Waveform",
-        juce::StringArray { "Sine", "Square", "Saw", "Triangle", "Noise", "Add1", "Add2" },
-        0 // default
-    ));
+    // ========== OSC1 ========== //
+    params.push_back(std::make_unique<AudioParameterBool>(
+        "osc1On", "OSC1 On", true));
 
-    // ================= OSCILLATOR 2 WAVEFORM ================= //
-    params.push_back (std::make_unique<juce::AudioParameterChoice>(
-        "osc2Waveform", "Osc2 Waveform",
-        juce::StringArray { "Sine", "Square", "Saw", "Triangle", "Noise", "Add1", "Add2" },
-        0 // default
-    ));
+    params.push_back(std::make_unique<AudioParameterChoice>(
+        "osc1Wave", "OSC1 Waveform",
+        StringArray{ "Sine","Square","Saw","Triangle","Noise","Add1","Add2" }, 0));
 
-    // ================= OSC BLEND ================= //
-    params.push_back (std::make_unique<juce::AudioParameterFloat>(
-        "oscBlend", "Osc Blend",
-        juce::NormalisableRange<float>(0.0f, 1.0f),
-        0.5f    // 0.0 = pure osc1, 1.0 = pure osc2
-    ));
+    // 5-point pitch for OSC1 (matches editor)
+    params.push_back(std::make_unique<AudioParameterChoice>(
+        "osc1Pitch", "OSC1 Pitch",
+        StringArray{ "-12","-7","0","+7","+12" }, 2)); // index 2 = "0"
+
+    params.push_back(std::make_unique<AudioParameterFloat>(
+        "osc1Detune", "OSC1 Detune", -100.f, 100.f, 0.f));
+
+    params.push_back(std::make_unique<AudioParameterFloat>(
+        "osc1Gain", "OSC1 Gain", 0.f, 1.f, 0.8f));
+
+    params.push_back(std::make_unique<AudioParameterFloat>(
+        "osc1FM", "OSC1 FM", 0.f, 10.f, 0.f));
+
+    // ========== OSC2 ========== //
+    params.push_back(std::make_unique<AudioParameterBool>(
+        "osc2On", "OSC2 On", true));
+
+    params.push_back(std::make_unique<AudioParameterChoice>(
+        "osc2Wave", "OSC2 Waveform",
+        StringArray{ "Sine","Square","Saw","Triangle","Noise","Add1","Add2" }, 0));
+
+    params.push_back(std::make_unique<AudioParameterChoice>(
+        "osc2Pitch", "OSC2 Pitch",
+        StringArray{ "-12","-7","0","+7","+12" }, 2));
+
+    params.push_back(std::make_unique<AudioParameterFloat>(
+        "osc2Detune", "OSC2 Detune", -100.f, 100.f, 0.f));
+
+    params.push_back(std::make_unique<AudioParameterFloat>(
+        "osc2Gain", "OSC2 Gain", 0.f, 1.f, 0.8f));
+
+    params.push_back(std::make_unique<AudioParameterFloat>(
+        "osc2FM", "OSC2 FM", 0.f, 10.f, 0.f));
+
+    // ========== BLEND ========== //
+    params.push_back(std::make_unique<AudioParameterFloat>(
+        "oscBlend", "OSC Blend", 0.f, 1.f, 0.5f));
 
     return { params.begin(), params.end() };
 }

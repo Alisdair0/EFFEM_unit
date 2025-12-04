@@ -2,8 +2,27 @@
 
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_dsp/juce_dsp.h>
-//#include <juce_gui_extra/juce_gui_extra.h>
 #include "PluginProcessor.h"
+
+//==============================================================================
+//   WAVEFORM VISUALIZER COMPONENT
+//==============================================================================
+class WaveformDisplay : public juce::Component,
+                        private juce::Timer
+{
+public:
+    WaveformDisplay(AudioPluginAudioProcessor& p);
+
+    void paint(juce::Graphics& g) override;
+    void resized() override {}
+
+private:
+    AudioPluginAudioProcessor& processor;
+
+    void timerCallback() override;
+
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(WaveformDisplay)
+};
 
 //==============================================================================
 
@@ -17,6 +36,7 @@ public:
     void resized() override;
 
 private:
+    WaveformDisplay waveformDisplay;
     AudioPluginAudioProcessor& processorRef;
 
     // Play
@@ -75,20 +95,52 @@ private:
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> cutoffAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> resonanceAttachment;
 
+    // OSC1
     juce::ComboBox osc1WaveBox;
+    juce::ComboBox osc1PitchBox;
+    juce::Slider   detune1Slider;
+    juce::Slider   gain1Slider;
+    juce::Slider   fm1Slider;
+
+    // OSC1 attachments
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> osc1WaveAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> osc1PitchAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>   osc1DetuneAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>   osc1GainAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>   osc1FmAttachment;
+
+    // OSC1 labels
+    juce::Label osc1GainLabel      { "osc1GainLabel",      "Gain" };
+    juce::Label osc1DetuneLabel    { "osc1DetuneLabel",    "Detune" };
+    juce::Label osc1FmLabel        { "osc1FmLabel",        "FM" };
+    juce::Label osc1PitchLabel     { "osc1PitchLabel",     "Pitch" };
+    juce::Label osc1WaveLabel      { "osc1WaveLabel",      "Wave" };
+
+    // OSC2
     juce::ComboBox osc2WaveBox;
-    juce::Slider   blendSlider;
+    juce::ComboBox osc2PitchBox;
+    juce::Slider   detune2Slider;
+    juce::Slider   gain2Slider;
+    juce::Slider   fm2Slider;
 
-    juce::Label osc1WaveLabel {"osc1WaveLabel", "Osc 1 Wave"};
-    juce::Label osc2WaveLabel {"osc2WaveLabel", "Osc 2 Wave"};
-    juce::Label blendLabel    {"blendLabel",    "Osc Blend"};
+    // OSC2 attachments
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> osc2WaveAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> osc2PitchAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>   osc2DetuneAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>   osc2GainAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>   osc2FmAttachment;
 
-    std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> osc1WaveAttach;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> osc2WaveAttach;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>   blendAttach;
+    // OSC2 labels
+    juce::Label osc2GainLabel      { "osc2GainLabel",      "Gain" };
+    juce::Label osc2DetuneLabel    { "osc2DetuneLabel",    "Detune" };
+    juce::Label osc2FmLabel        { "osc2FmLabel",        "FM" };
+    juce::Label osc2PitchLabel     { "osc2PitchLabel",     "Pitch" };
+    juce::Label osc2WaveLabel      { "osc2WaveLabel",      "Wave" };
 
-    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> osc1OnAttach;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> osc2OnAttach;
+    // Blend
+    juce::Slider blendSlider;
+    juce::Label blendLabel { "blendLabel", "Osc Blend" };
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> blendAttachment;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AudioPluginAudioProcessorEditor)
 };

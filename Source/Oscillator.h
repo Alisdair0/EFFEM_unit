@@ -23,11 +23,17 @@ public:
     void setGain (float newGain);
     void setWaveform(int type);
 
+    void reset();
+
+    void processWithFM (juce::AudioBuffer<float>& buffer, const float* fmBuffer, float fmDepth);
+
 private:
     juce::dsp::Oscillator<float> osc;
     juce::dsp::Gain<float> gain;
 
     juce::dsp::ProcessSpec spec;
+
+    float baseFrequency = 440.0f; // default
 
     enum Waveforms
     {
