@@ -10,7 +10,7 @@ static void configureSliderTwoDecimals(juce::Slider& s)
 AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor (AudioPluginAudioProcessor& p)
     : AudioProcessorEditor (&p), processorRef (p)
 {
-    setSize (900, 400);
+    setSize (1250, 450);
 
     auto& state = processorRef.getState();
 
@@ -36,7 +36,6 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor (AudioPluginAud
         state, "detune", detuneSlider);
 
     // Pitch Shift (combo)
-    // Pitch Shift
     pitchShiftBox.addItem("-12 semitones", 1);
     pitchShiftBox.addItem("0 semitones", 2);
     pitchShiftBox.addItem("+12 semitones", 3);
@@ -127,8 +126,91 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor (AudioPluginAud
     configureSliderTwoDecimals(sustainSlider);
     configureSliderTwoDecimals(releaseSlider);
 
-    // label styling
-    for (auto* label : { &masterGainLabel, &detuneLabel, &pitchShiftLabel, &panLabel, &fmLabel })
+    // --- FILTER LABEL ---
+    filterLabel.setText("Filter", juce::dontSendNotification);
+    filterLabel.setJustificationType(juce::Justification::centred);
+    addAndMakeVisible(filterLabel);
+
+    // --- FILTER TYPE ---
+    filterType.addItem("Lowpass", 1);
+    filterType.addItem("Highpass", 2);
+    filterType.addItem("Bandpass", 3);
+    addAndMakeVisible(filterType);
+
+    // APS parameters = your APVTS
+    filterTypeAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(
+        state, "filterType", filterType);
+
+    // --- CUTOFF SLIDER ---
+    cutoffSlider.setSliderStyle(juce::Slider::LinearHorizontal);
+    cutoffSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 60, 20);
+    addAndMakeVisible(cutoffSlider);
+
+    cutoffAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+        state, "filterCutoff", cutoffSlider);
+
+    // --- RESONANCE SLIDER ---
+    resonanceSlider.setSliderStyle(juce::Slider::LinearHorizontal);
+    resonanceSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 60, 20);
+    addAndMakeVisible(resonanceSlider);
+
+    resonanceAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+        state, "filterResonance", resonanceSlider);
+
+    // ---- OSC 1 ----
+    osc1WaveLabel.setColour(juce::Label::textColourId, juce::Colours::white);
+    osc1WaveLabel.setJustificationType(juce::Justification::centred);
+    addAndMakeVisible(osc1WaveLabel);
+
+    osc1WaveBox.addItem("Sine", 1);
+    osc1WaveBox.addItem("Square", 2);
+    osc1WaveBox.addItem("Saw", 3);
+    osc1WaveBox.addItem("Triangle", 4);
+    osc1WaveBox.addItem("Noise", 5);
+    osc1WaveBox.addItem("Add1", 6);
+    osc1WaveBox.addItem("Add2", 7);
+    addAndMakeVisible(osc1WaveBox);
+
+    osc1WaveAttach = std::make_unique<
+        juce::AudioProcessorValueTreeState::ComboBoxAttachment>(
+            state, "osc1Waveform", osc1WaveBox);
+
+    // ---- OSC 2 ----
+    osc2WaveLabel.setColour(juce::Label::textColourId, juce::Colours::white);
+    osc2WaveLabel.setJustificationType(juce::Justification::centred);
+    addAndMakeVisible(osc2WaveLabel);
+
+    osc2WaveBox.addItem("Sine", 1);
+    osc2WaveBox.addItem("Square", 2);
+    osc2WaveBox.addItem("Saw", 3);
+    osc2WaveBox.addItem("Triangle", 4);
+    osc2WaveBox.addItem("Noise", 5);
+    osc2WaveBox.addItem("Add1", 6);
+    osc2WaveBox.addItem("Add2", 7);
+    addAndMakeVisible(osc2WaveBox);
+
+    osc2WaveAttach = std::make_unique<
+        juce::AudioProcessorValueTreeState::ComboBoxAttachment>(
+            state, "osc2Waveform", osc2WaveBox);
+
+    // ---- BLEND ----
+    blendLabel.setColour(juce::Label::textColourId, juce::Colours::white);
+    blendLabel.setJustificationType(juce::Justification::centred);
+    addAndMakeVisible(blendLabel);
+
+    blendSlider.setSliderStyle(juce::Slider::LinearHorizontal);
+    blendSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 60, 20);
+    addAndMakeVisible(blendSlider);
+
+    blendAttach = std::make_unique<
+        juce::AudioProcessorValueTreeState::SliderAttachment>(
+            state, "oscBlend", blendSlider);
+
+    // =============== LABEL STYLING ================= //
+    for (auto* label : { &masterGainLabel, &detuneLabel, &pitchShiftLabel,
+                         &panLabel, &fmLabel, &attackLabel, &decayLabel,
+                         &sustainLabel, &releaseLabel, &filterLabel,
+                         &cutoffLabel, &resonanceLabel })
     {
         label->setColour (juce::Label::textColourId, juce::Colours::white);
         label->setJustificationType (juce::Justification::centred);
@@ -147,56 +229,47 @@ void AudioPluginAudioProcessorEditor::paint (juce::Graphics& g)
 
 void AudioPluginAudioProcessorEditor::resized()
 {
-    auto area = getLocalBounds().reduced (20);
+    const int pad      = 20;
+    const int labelH   = 20;
+    const int controlH = 55;
+    const int colW     = 120;
 
-    // top row: master gain, pan, FM
-    auto topRow = area.removeFromTop (160);
-    const int knobWidth = 140;
+    auto place = [&](juce::Label& l, juce::Component& c, int x, int y)
+    {
+        l.setBounds(x, y, colW, labelH);
+        c.setBounds(x, y + labelH, colW, controlH);
+    };
 
-    auto mgArea = topRow.removeFromLeft (knobWidth);
-    masterGainLabel.setBounds (mgArea.removeFromTop (20));
-    masterGainSlider.setBounds (mgArea);
+    // === ROW 1: Gain | Waveform | Detune | PitchShift | Pan | FM | Release ===
+    int y1 = pad;
+    int x  = pad;
 
-    auto panArea = topRow.removeFromLeft (knobWidth);
-    panLabel.setBounds (panArea.removeFromTop (20));
-    panSlider.setBounds (panArea);
+    place(osc1WaveLabel, osc1WaveBox,  x, y1);  x += colW + pad;
+    place(osc2WaveLabel, osc2WaveBox,  x, y1);  x += colW + pad;
+    place(blendLabel,    blendSlider,  x, y1);  x += colW + pad;
+    place(masterGainLabel, masterGainSlider, x, y1);  x += colW + pad;
+    place(detuneLabel, detuneSlider,         x, y1);  x += colW + pad;
+    place(pitchShiftLabel, pitchShiftBox,    x, y1);  x += colW + pad;
+    place(panLabel, panSlider,               x, y1);  x += colW + pad;
+    place(fmLabel, fmSlider,                 x, y1);
 
-    auto fmArea = topRow.removeFromLeft (knobWidth);
-    fmLabel.setBounds (fmArea.removeFromTop (20));
-    fmSlider.setBounds (fmArea);
+    // === ROW 2: Attack | Decay | Sustain ===
+    int y2 = y1 + labelH + controlH + pad;
+    x = pad;
 
-    // middle: detune and pitch shift
-    auto midRow = area.removeFromTop (160);
+    place(attackLabel, attackSlider,   x, y2);  x += colW + pad;
+    place(decayLabel,  decaySlider,    x, y2);  x += colW + pad;
+    place(sustainLabel, sustainSlider, x, y2);  x += colW + pad;
+    place(releaseLabel, releaseSlider, x, y1);
 
-    auto detuneArea = midRow.removeFromLeft (knobWidth);
-    detuneLabel.setBounds (detuneArea.removeFromTop (20));
-    detuneSlider.setBounds (detuneArea);
+    // === ROW 3: Filter | Cutoff | Resonance ===
+    int y3 = y2 + labelH + controlH + pad;
+    x = pad;
 
-    auto pitchArea = midRow.removeFromLeft (knobWidth);
-    pitchShiftLabel.setBounds(20, 115, 120, 20);
-    pitchShiftBox.setBounds(20, 135, 120, 24);
-
-    // bottom: play button
-    playButton.setBounds (area.removeFromTop (40).removeFromLeft (120));
-
-    // ADSR layout (4 vertical sliders in a row)
-    int left = 20;
-    int top = 200;
-    int width = 40;
-    int height = 160;
-
-    attackLabel .setBounds(left, top - 20, width, 20);
-    attackSlider.setBounds(left, top, width, height);
-
-    left += 50;
-    decayLabel .setBounds(left, top - 20, width, 20);
-    decaySlider.setBounds(left, top, width, height);
-
-    left += 50;
-    sustainLabel .setBounds(left, top - 20, width, 20);
-    sustainSlider.setBounds(left, top, width, height);
-
-    left += 50;
-    releaseLabel .setBounds(left, top - 20, width, 20);
-    releaseSlider.setBounds(left, top, width, height);
+    place(filterLabel, filterType,     x, y3);  x += colW + pad;
+    place(cutoffLabel, cutoffSlider,   x, y3);  x += colW + pad;
+    place(resonanceLabel, resonanceSlider, x, y3);
 }
+
+
+

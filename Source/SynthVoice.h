@@ -136,7 +136,7 @@ public:
             auto* s2  = tempBuffer2.getReadPointer (ch);
 
             for (int i = 0; i < numSamples; ++i)
-                dst[i] = (s1[i] + s2[i]) * level; // level = velocity; gain already in osc
+                dst[i] = (s1[i] * (1.0f - blend) + s2[i] * blend) * level;
         }
 
         // apply ADSR
@@ -187,6 +187,20 @@ public:
         }
     }
 
+    void updateOscillators (int wave1, int wave2, float blendAmount)
+    {
+        osc1.setWaveform (wave1);
+        osc2.setWaveform (wave2);
+        blend = juce::jlimit(0.0f, 1.0f, blendAmount);
+    }
+
+    void updateOscOnOff(bool o1, bool o2)
+    {
+        osc1On = o1;
+        osc2On = o2;
+    }
+
+
 ///////////////////////////////////////////
 private:
     Oscillator osc1, osc2;
@@ -208,6 +222,10 @@ private:
     float detune     = 0.0f;
     float pitchShift = 0.0f;
     float fmAmount   = 0.0f;
+
+    float blend = 0.5f;
+    bool osc1On = true;
+    bool osc2On = true;
 };
 
 

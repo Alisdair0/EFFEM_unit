@@ -71,6 +71,10 @@ private:
     std::atomic<float>* filterResonanceParam = nullptr;
     std::atomic<float>* filterTypeParam = nullptr;
 
+    // waveforms
+    juce::ComboBox waveformBox;
+    juce::Label waveformLabel { "waveformLabel", "Waveform" };
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> waveformAttachment;
 
     juce::AudioProcessorValueTreeState state;
     juce::AudioProcessorValueTreeState::ParameterLayout createParameters();

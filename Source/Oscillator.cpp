@@ -38,28 +38,25 @@ void Oscillator::setGain (float newGain)
 
 void Oscillator::setWaveform (int type)
 {
-    switch (type)
-    {
-        case 0: osc.initialise([](float x){ return std::sin(x); }); break;
-        case 1: osc.initialise([](float x){ return x < 0.0f ? -1.0f : 1.0f; }); break; // square
-        case 2: osc.initialise([](float x){ return (2.0f / juce::MathConstants<float>::pi) * std::asin(std::sin(x)); }); break; // triangle
-        case 3: osc.initialise([](float x){ return x / juce::MathConstants<float>::pi; }); break; // saw
-        default: osc.initialise([](float x){ return std::sin(x); }); break;
-    }
+    initWaveform (type);
 }
 
 void Oscillator::initWaveform (int waveformIndex)
 {
     switch (waveformIndex)
     {
-        case Sine:
+        case 0: // Sine
+            osc.initialise ([] (float x) { return std::sin (x); });
+            break;
+
+        case 1: // Square
             osc.initialise ([] (float x)
             {
-                return std::sin (x);
+                return x < 0.0f ? -1.0f : 1.0f;
             });
             break;
 
-        case Saw:
+        case 2: // Saw
             osc.initialise ([] (float x)
             {
                 return juce::jmap (x,
@@ -69,19 +66,38 @@ void Oscillator::initWaveform (int waveformIndex)
             });
             break;
 
-        case Square:
+        case 3: // Triangle
             osc.initialise ([] (float x)
             {
-                return (x < 0.0f ? -1.0f : 1.0f);
+                return asinf (std::sin (x)) * (2.0f / juce::MathConstants<float>::pi);
             });
             break;
 
-        case Triangle:
+        case 4: // Noise
+            osc.initialise ([] (float)
+            {
+                return juce::Random::getSystemRandom().nextFloat() * 2.0f - 1.0f;
+            }, 256); // table size
+            break;
+
+        case 5: // Additive 1 (sine + 2nd harmonic)
             osc.initialise ([] (float x)
             {
-                return (2.0f / juce::MathConstants<float>::pi)
-                        * std::asin (std::sin (x));
+                return std::sin(x) + 0.3f * std::sin(2.0f * x);
             });
+            break;
+
+        case 6: // Additive 2 (sine + 2nd + 3rd)
+            osc.initialise ([] (float x)
+            {
+                return std::sin(x)
+                     + 0.3f * std::sin(2.0f * x)
+                     + 0.15f * std::sin(3.0f * x);
+            });
+            break;
+
+        default:
+            osc.initialise ([] (float x) { return std::sin (x); });
             break;
     }
 }
