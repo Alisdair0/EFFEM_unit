@@ -66,9 +66,7 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor (AudioPluginAud
     configureSliderTwoDecimals(masterGainSlider);
     configureSliderTwoDecimals(fmSlider);
 
-    // =========================================================
     // ADSR
-    // =========================================================
 
     attackSlider.setSliderStyle(juce::Slider::LinearVertical);
     attackSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 40, 16);
@@ -310,7 +308,7 @@ void WaveformDisplay::paint(juce::Graphics& g) {
 
         p.lineTo(x, y);
     }
-    g.setColour(juce::Colours::white);
+    g.setColour(juce::Colours::orange);
     g.strokePath(p, juce::PathStrokeType(2.0f));
 }
 

@@ -188,7 +188,7 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
 
     buffer.clear();
 
-    // ===================== READ ALL OSC PARAMETERS ===================== //
+    // Read all Osc Params
 
     auto* osc1OnParam   = state.getRawParameterValue("osc1On");
     auto* osc2OnParam   = state.getRawParameterValue("osc2On");

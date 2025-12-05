@@ -93,6 +93,7 @@ private:
     juce::Label waveformLabel { "waveformLabel", "Waveform" };
     std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> waveformAttachment;
 
+    // Connection between processor & editor
     juce::AudioProcessorValueTreeState state;
     juce::AudioProcessorValueTreeState::ParameterLayout createParameters();
 

@@ -14,7 +14,7 @@ void Oscillator::prepare(double sampleRate, int samplesPerBlock, int channels)
     // Default waveform
     initWaveform(0);
 
-    // Disable smoothing on FIRST call
+    // Disable smoothing
     osc.setFrequency(440.0f, true);
 }
 
