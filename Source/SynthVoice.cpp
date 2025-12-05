@@ -132,8 +132,8 @@ void SynthVoice::updateOscOnOff(bool o1, bool o2)
 
 void SynthVoice::updateFM(float fm1Amount, float fm2Amount)
 {
-    fm1 = fm1Amount;
-    fm2 = fm2Amount;
+    // fm1 = fm1Amount;
+    // fm2 = fm2Amount;
 }
 
 //==============================================================================
@@ -154,38 +154,39 @@ void SynthVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer,
     tempBuffer2.clear();
     mixBuffer.clear();
 
-    // Generate oscillator output
-    osc2.process(tempBuffer2); // modulator first
-    osc1.processWithFM(tempBuffer1,
-                       tempBuffer2.getReadPointer(0),
-                       fm1 * 100.0f);  // FM depth scaled
-
-    float fm1Depth = fm1 * 0.1f;
-    float fm2Depth = fm2 * 0.1f;
+    osc1.process(tempBuffer1);
+    osc2.process(tempBuffer2);
 
     for (int ch = 0; ch < numChannels; ++ch)
     {
-        auto* out = mixBuffer.getWritePointer(ch);
+        auto* dst = mixBuffer.getWritePointer(ch);
         auto* o1  = tempBuffer1.getReadPointer(ch);
         auto* o2  = tempBuffer2.getReadPointer(ch);
 
         for (int i = 0; i < numSamples; ++i)
         {
-            float m1 = o1[i] * (1.f + fm2Depth * o2[i]); // osc2→osc1
-            float m2 = o2[i] * (1.f + fm1Depth * o1[i]); // osc1→osc2
+            float s1 = osc1On ? o1[i] : 0.0f;
+            float s2 = osc2On ? o2[i] : 0.0f;
 
-            float a = osc1On ? m1 * (1.f - blend) : 0.f;
-            float b = osc2On ? m2 * blend          : 0.f;
+            // Absolute mute if gain is too low (prevents saw bleed)
+            if (std::abs(s1) < 1e-6f) s1 = 0.0f;
+            if (std::abs(s2) < 1e-6f) s2 = 0.0f;
 
-            out[i] = (a + b) * level;
+            float mixed = s1 * (1.0f - blend)
+                        + s2 * blend;
+
+            dst[i] = mixed * level;
         }
     }
 
+    // Apply envelope
     adsr.applyEnvelopeToBuffer(mixBuffer, 0, numSamples);
 
+    // Filter
     juce::dsp::AudioBlock<float> block(mixBuffer);
     filter.process(juce::dsp::ProcessContextReplacing<float>(block));
 
+    // Add to output buffer
     for (int ch = 0; ch < numChannels; ++ch)
     {
         auto* dst = outputBuffer.getWritePointer(ch, startSample);

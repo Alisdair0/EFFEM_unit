@@ -247,17 +247,21 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     float fm1 = osc1FmParam ? osc1FmParam->load() : 0.0f;
     float fm2 = osc2FmParam ? osc2FmParam->load() : 0.0f;
 
+    auto* read = buffer.getReadPointer(0);
+    for (int i = 0; i < buffer.getNumSamples(); ++i)
+        pushNextSampleIntoScope(read[i]);
+
     // ===================== VISUALIZER ======================= //
-    for (int ch = 0; ch < buffer.getNumChannels(); ++ch)
-    {
-        auto* data = buffer.getReadPointer(ch);
-        for (int i = 0; i < buffer.getNumSamples(); ++i)
-        {
-            // Use channel 0 or the average — here we use CH0:
-            if (ch == 0)
-                pushNextSampleIntoScope(data[i]);
-        }
-    }
+    // for (int ch = 0; ch < buffer.getNumChannels(); ++ch)
+    // {
+    //     auto* data = buffer.getReadPointer(ch);
+    //     for (int i = 0; i < buffer.getNumSamples(); ++i)
+    //     {
+    //         // Use channel 0 or the average — here we use CH0:
+    //         if (ch == 0)
+    //             pushNextSampleIntoScope(data[i]);
+    //     }
+    // }
 
     // ===================== UPDATE ALL VOICES ===================== //
 

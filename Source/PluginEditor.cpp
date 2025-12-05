@@ -310,6 +310,8 @@ void WaveformDisplay::paint(juce::Graphics& g) {
 
         p.lineTo(x, y);
     }
+    g.setColour(juce::Colours::white);
+    g.strokePath(p, juce::PathStrokeType(2.0f));
 }
 
 void WaveformDisplay::timerCallback()

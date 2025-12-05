@@ -27,7 +27,6 @@ public:
     void renderNextBlock (juce::AudioBuffer<float>&,
                           int startSample, int numSamples) override;
 
-    // ===== Setup (processor calls this in prepareToPlay) =====
     void prepare (double sampleRate, int samplesPerBlock, int numChannels);
 
     // ===== Runtime parameter updates =====
@@ -42,7 +41,6 @@ public:
     void updateFM (float fm1Amount, float fm2Amount);
 
 private:
-    // ===== DSP components =====
     Oscillator osc1, osc2;
     juce::AudioBuffer<float> tempBuffer1, tempBuffer2, mixBuffer;
 
@@ -52,7 +50,7 @@ private:
     juce::dsp::StateVariableTPTFilter<float> filter;
     juce::dsp::ProcessSpec filterSpec;
 
-    // ===== voice state =====
+    // voice state
     float baseFrequency = 440.0f;
     float level = 0.0f;
     bool isActive = false;
